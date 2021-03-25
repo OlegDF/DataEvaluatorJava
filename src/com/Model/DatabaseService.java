@@ -10,11 +10,9 @@ import java.sql.SQLException;
 public class DatabaseService {
 
     private Connection connection = null;
-    private final String db;
 
     public DatabaseService(String db, String user, String password) {
         openConnection(db, user, password);
-        this.db = db;
     }
 
     private void openConnection(String db, String user, String password) {
