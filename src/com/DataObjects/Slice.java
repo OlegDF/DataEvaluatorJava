@@ -33,18 +33,8 @@ public class Slice {
         return new Slice(colNames, labels, pointsAccumulated);
     }
 
-    public boolean isIntervalDecreasing(int pos1, int pos2) {
-        return points[pos2].value < points[pos1].value;
-    }
-
-    public double getDecreaseScore(int pos1, int pos2) {
-        if(pos1 < 0 || pos1 >= points.length || pos2 < 0 || pos2 >= points.length) {
-            return -1;
-        }
-        double res = (double)(points[pos2].value - points[pos1].value) * (points[pos2].value - points[pos1].value) *
-                (points[pos2].date.getTime() - points[pos1].date.getTime()) /
-                (points[points.length - 1].date.getTime() - points[0].date.getTime()) / valueRange / valueRange;
-        return res;
+    public boolean isIntervalDecreasing(int pos1, int pos2, long threshold) {
+        return points[pos2].value - points[pos1].value < -threshold;
     }
 
     private long getValueRange() {

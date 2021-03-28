@@ -72,15 +72,15 @@ public class GraphExporter {
         }
         imageName.append("_").append(intervalId).append(".png");
         TimeSeries mainSeries = new TimeSeries("Value Before");
-        for(int i = 0; i < interval.moment1; i++) {
+        for(int i = 0; i < interval.pos1; i++) {
             mainSeries.addOrUpdate(new Millisecond(slice.points[i].date), slice.points[i].value * slice.points[i].amount);
         }
         TimeSeries decreaseSeries = new TimeSeries("Decrease");
-        for(int i = interval.moment1; i <= interval.moment2; i++) {
+        for(int i = interval.pos1; i <= interval.pos2; i++) {
             decreaseSeries.addOrUpdate(new Millisecond(slice.points[i].date), slice.points[i].value * slice.points[i].amount);
         }
         TimeSeries mainSeries2 = new TimeSeries("Value After");
-        for(int i = interval.moment2; i < slice.points.length; i++) {
+        for(int i = interval.pos2; i < slice.points.length; i++) {
             mainSeries2.addOrUpdate(new Millisecond(slice.points[i].date), slice.points[i].value * slice.points[i].amount);
         }
         TimeSeriesCollection dataset = new TimeSeriesCollection();
