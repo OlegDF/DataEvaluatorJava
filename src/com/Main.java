@@ -8,7 +8,7 @@ public class Main {
 
         DataController dataController = new DataController();
 
-        dataController.exportTypeUnitGraphsAccumulated();
+        dataController.exportTypeUnitDecreases();
 
         dataController.close();
 
