@@ -2,6 +2,9 @@ package com.DataObjects;
 
 import java.util.Date;
 
+/**
+ * Точка разреза, состоящая из значения, количества предметов и даты/времени, в которое значение зафиксировано
+ */
 public class SlicePoint {
 
     public final long value;

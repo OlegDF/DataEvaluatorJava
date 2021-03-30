@@ -11,6 +11,9 @@ import com.View.GraphExporter;
 
 import java.util.List;
 
+/**
+ * Класс, который имеет доступ к остальным элементам программы и может вызывать их методы.
+ */
 public class DataController {
 
     private DataRetriever dataRetriever;
@@ -32,6 +35,10 @@ public class DataController {
         dataRetriever.csvToDatabase("data_v1.csv");
     }
 
+    /**
+     * Получает разрезы данных, сгруппированных по типу и единице измерения, генерирует граф из каждого разреза и
+     * сохраняет граф в виде изображения .png.
+     */
     public void exportTypeUnitGraphs() {
         List<Slice> slices = sliceRetriever.getTypeUnitSlices();
         for(Slice slice: slices) {
@@ -39,6 +46,10 @@ public class DataController {
         }
     }
 
+    /**
+     * Получает разрезы данных, сгруппированных по типу и единице измерения, делает накопление для каждого разреза,
+     * генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
+     */
     public void exportTypeUnitGraphsAccumulated() {
         List<Slice> slices = sliceRetriever.getTypeUnitSlicesAccumulated();
         for(Slice slice: slices) {
@@ -46,6 +57,11 @@ public class DataController {
         }
     }
 
+    /**
+     * Получает разрезы данных, сгруппированных по типу и единице измерения, делает накопление для каждого разреза,
+     * получает список интервалов, на которых значение убывает, сортирует его по величине убывания, генерирует граф из
+     * каждого разреза и сохраняет граф в виде изображения .png.
+     */
     public void exportTypeUnitDecreases() {
         List<Slice> slices = sliceRetriever.getTypeUnitSlicesAccumulated();
         List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slices);
@@ -56,6 +72,9 @@ public class DataController {
         }
     }
 
+    /**
+     * Метод, завершающий работу компонентов.
+     */
     public void close() {
         dbService.closeConnection();
     }

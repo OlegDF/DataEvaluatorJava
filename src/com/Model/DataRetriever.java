@@ -5,6 +5,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.regex.Pattern;
 
+/**
+ * Класс, который считывает данные из файла и передает их на запись в базу данных.
+ */
 public class DataRetriever {
 
     final String tableName = "data";
@@ -15,6 +18,11 @@ public class DataRetriever {
         this.databaseService = databaseService;
     }
 
+    /**
+     * Обрабатывает содержимое файла csv и записывает его содержимое в базу данных, с которой установлена связь.
+     *
+     * @param csvPath - название файла csv/путь к нему
+     */
     public void csvToDatabase(String csvPath) {
         try {
             BufferedReader lineReader = new BufferedReader(new FileReader(csvPath));
@@ -36,6 +44,13 @@ public class DataRetriever {
         }
     }
 
+    /**
+     * Определяет типы столбцов новой таблицы по формату данных в первой строке файла. Возможные типы - целое число
+     * (int8), десятичное число (float), дата/время (timestamptz) и строка (string).
+     *
+     * @param firstRow - первая строка, содержащая данные для вставки в таблицу
+     * @return список названий типов данных
+     */
     private String[] getColTypes(String[] firstRow) {
         String[] colTypes = new String[firstRow.length];
 

@@ -15,10 +15,20 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+/**
+ * Класс, который экспортирует разрезы данных и интервалы в виде изображений на диске.
+ */
 public class GraphExporter {
 
     public GraphExporter() {}
 
+    /**
+     * Генерирует граф из заданного разреза и сохраняет граф в виде изображения .png. Ничего не происходит, если
+     * в разрезе менее 2 точек.
+     *
+     * @param slice - разрез данных
+     * @return true, если экспорт прошел успешно, иначе false
+     */
     public boolean exportGraphToPng(Slice slice) {
         if(slice.points.length < 2) {
             return false;
@@ -51,10 +61,19 @@ public class GraphExporter {
                     600);
         } catch (IOException ex) {
             ex.printStackTrace();
+            return false;
         }
         return true;
     }
 
+    /**
+     * Генерирует граф из разреза, на котором расположен заданный интервал (сам интервал выделяется цветом) и сохраняет
+     * граф в виде изображения .png. Ничего не происходит, если в разрезе менее 2 точек.
+     *
+     * @param interval - интервал
+     * @param intervalId - номер, под которым следует сохранить изображение
+     * @return true, если экспорт прошел успешно, иначе false
+     */
     public boolean exportDecreaseGraphToPng(SuspiciousInterval interval, int intervalId) {
         Slice slice = interval.slice;
         if(slice.points.length < 2) {
@@ -98,6 +117,7 @@ public class GraphExporter {
                     600);
         } catch (IOException ex) {
             ex.printStackTrace();
+            return false;
         }
         return true;
     }

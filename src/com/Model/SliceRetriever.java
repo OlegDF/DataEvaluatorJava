@@ -5,6 +5,9 @@ import com.DataObjects.Slice;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Класс, который получает разрезы данных.
+ */
 public class SliceRetriever {
 
     final String tableName = "data";
@@ -15,6 +18,11 @@ public class SliceRetriever {
         this.databaseService = databaseService;
     }
 
+    /**
+     * Получает разрезы данных, сгруппированных по типу и единице измерения.
+     *
+     * @return список разрезов
+     */
     public List<Slice> getTypeUnitSlices() {
         List<Slice> res = new ArrayList<>();
         String[] types = databaseService.getUniqueLabels("data", "category_3");
@@ -29,6 +37,11 @@ public class SliceRetriever {
         return res;
     }
 
+    /**
+     * Получает разрезы данных, сгруппированных по типу и единице измерения, а также делает накопление для каждого разреза.
+     *
+     * @return список разрезов с накоплением
+     */
     public List<Slice> getTypeUnitSlicesAccumulated() {
         List<Slice> res = new ArrayList<>();
         String[] types = databaseService.getUniqueLabels("data", "category_3");

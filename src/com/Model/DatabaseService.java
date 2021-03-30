@@ -7,10 +7,20 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+/**
+ * Сервис, который управляет запросами к базе данных Postgres.
+ */
 public class DatabaseService {
 
     private Connection connection = null;
 
+    /**
+     * Конструктор, устанавливающий соединение с базой данных с указанным названием, именем пользователя и паролем.
+     *
+     * @param db - название базы данных
+     * @param user - имя пользователя
+     * @param password - пароль
+     */
     public DatabaseService(String db, String user, String password) {
         openConnection(db, user, password);
     }
@@ -24,6 +34,14 @@ public class DatabaseService {
         }
     }
 
+    /**
+     * Создает таблицу с указанным названием, в которой будут храниться результаты работы. Также удаляет существующую
+     * таблицу с таким же названием, если она существует.
+     *
+     * @param tableName - название таблицы
+     * @param colNames - названия столбцов таблицы
+     * @param colTypes - типы данных в соответствующих столбцах
+     */
     public void createTable(String tableName, String[] colNames, String[] colTypes) {
         try {
             connection.createStatement().executeQuery("DROP TABLE IF EXISTS " + tableName + ";");
@@ -41,6 +59,14 @@ public class DatabaseService {
         }
     }
 
+    /**
+     * Вставляет в таблицу новую строку с указанными значениями данных.
+     *
+     * @param tableName - название таблицы
+     * @param colNames - названия столбцов таблицы
+     * @param colTypes - типы данных в соответствующих столбцах
+     * @param row - значения в новой строке в строковом виде
+     */
     public void insertData(String tableName, String[] colNames, String[] colTypes, String[] row) {
         try {
             StringBuilder query = new StringBuilder("INSERT INTO " + tableName + "(");
@@ -68,6 +94,14 @@ public class DatabaseService {
         }
     }
 
+    /**
+     * Получает разрез - набор данных, в которых один или более столбцов равны заданным значениям.
+     *
+     * @param tableName - название таблицы
+     * @param colNames - названия столбцов, по которым отбираются данные
+     * @param labels - значения в соответствующих столбцах в строковом виде
+     * @return объект-разрез
+     */
     public Slice getSlice(String tableName, String[] colNames, String[] labels) {
         try {
             StringBuilder query = new StringBuilder("SELECT * FROM " + tableName + " WHERE ");
@@ -96,6 +130,13 @@ public class DatabaseService {
         return new Slice(colNames, labels);
     }
 
+    /**
+     * Получает список уникальных значений, которые принимают данные в указанном столбце.
+     *
+     * @param tableName - название таблицы
+     * @param colName - название столбца
+     * @return список значений в строковом виде
+     */
     public String[] getUniqueLabels(String tableName, String colName) {
         try {
             StringBuilder query = new StringBuilder("SELECT DISTINCT " + colName + " FROM " + tableName + ";");
@@ -116,6 +157,9 @@ public class DatabaseService {
         return new String[0];
     }
 
+    /**
+     * Закрывает соединение с базой данных.
+     */
     public void closeConnection() {
         try {
             connection.close();
@@ -126,11 +170,6 @@ public class DatabaseService {
 
     private void handleSQLException(SQLException ex) {
         ex.printStackTrace();
-        try {
-            connection.rollback();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
     }
 
 }
