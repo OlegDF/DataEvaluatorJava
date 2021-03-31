@@ -53,6 +53,7 @@ public class GraphExporter {
         JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle.toString(), "Date", "Value", dataset);
         File path = new File("graphs/type_unit/");
         path.mkdirs();
+        clearDirectory(path);
         try {
             OutputStream out = new FileOutputStream(imageName.toString());
             ChartUtils.writeChartAsPNG(out,
@@ -109,6 +110,7 @@ public class GraphExporter {
         JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle.toString(), "Date", "Value", dataset);
         File path = new File("graphs/type_unit_decreasing/");
         path.mkdirs();
+        clearDirectory(path);
         try {
             OutputStream out = new FileOutputStream(imageName.toString());
             ChartUtils.writeChartAsPNG(out,
@@ -120,6 +122,14 @@ public class GraphExporter {
             return false;
         }
         return true;
+    }
+
+    private void clearDirectory(File path) {
+        for(File file: path.listFiles()) {
+            if(!file.isDirectory()) {
+                file.delete();
+            }
+        }
     }
 
 }

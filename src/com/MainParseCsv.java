@@ -2,13 +2,13 @@ package com;
 
 import com.Controler.DataController;
 
-public class Main {
+public class MainParseCsv {
 
     public static void main(String[] args) {
 
         DataController dataController = new DataController();
 
-        dataController.exportTypeUnitDecreases();
+        dataController.parseCsv();
 
         dataController.close();
 
