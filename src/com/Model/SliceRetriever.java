@@ -1,8 +1,10 @@
 package com.Model;
 
 import com.DataObjects.Slice;
+import com.DataObjects.SuspiciousInterval;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -34,7 +36,8 @@ public class SliceRetriever {
                 res.add(databaseService.getSlice(tableName, colNames, labels));
             }
         }
-        return res;
+        res.sort(Comparator.comparingLong(o -> -o.totalAmount));
+        return res.size() >= 10 ? res.subList(0, 10) : res;
     }
 
     /**
@@ -44,14 +47,9 @@ public class SliceRetriever {
      */
     public List<Slice> getTypeUnitSlicesAccumulated() {
         List<Slice> res = new ArrayList<>();
-        String[] types = databaseService.getUniqueLabels("data", "category_3");
-        String[] units = databaseService.getUniqueLabels("data", "category_4");
-        String[] colNames = {"category_3", "category_4"};
-        for(String type: types) {
-            for(String unit: units) {
-                String[]  labels = {"'" + type + "'", "'" + unit + "'"};
-                res.add(databaseService.getSlice(tableName, colNames, labels).getAccumulation());
-            }
+        List<Slice> slices = getTypeUnitSlices();
+        for(Slice slice: slices) {
+            res.add(slice.getAccumulation());
         }
         return res;
     }

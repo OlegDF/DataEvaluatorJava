@@ -9,7 +9,7 @@ public class Slice {
     public final String[] colNames;
     public final String[] labels;
     public final SlicePoint[] points;
-    public final long valueRange;
+    public final long valueRange, totalAmount;
 
     /**
      * Конструктор пустого разреза, для которого не найдено подходящих точек.
@@ -22,6 +22,7 @@ public class Slice {
         this.labels = labels;
         this.points = new SlicePoint[0];
         this.valueRange = getValueRange();
+        this.totalAmount = getTotalAmount();
     }
 
     /**
@@ -36,6 +37,7 @@ public class Slice {
         this.labels = labels;
         this.points = points;
         this.valueRange = getValueRange();
+        this.totalAmount = getTotalAmount();
     }
 
     /**
@@ -63,6 +65,19 @@ public class Slice {
      */
     public boolean isIntervalDecreasing(int pos1, int pos2, long threshold) {
         return points[pos2].value * points[pos2].amount - points[pos1].value * points[pos1].amount < -threshold;
+    }
+
+    /**
+     * Получает общее количество операций в разрезе.
+     *
+     * @return значение количества операций
+     */
+    private long getTotalAmount() {
+        long res = 0;
+        for(SlicePoint point: points) {
+            res += point.amount;
+        }
+        return res;
     }
 
     /**
