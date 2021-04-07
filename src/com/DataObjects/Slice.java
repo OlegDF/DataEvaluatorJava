@@ -6,6 +6,7 @@ package com.DataObjects;
  */
 public class Slice {
 
+    public final String tableName;
     public final String[] colNames;
     public final String[] labels;
     public final SlicePoint[] points;
@@ -17,7 +18,8 @@ public class Slice {
      * @param colNames - названия столбцов, по которым создается разрез
      * @param labels - значения соответствующих столбцов
      */
-    public Slice(String[] colNames, String[] labels) {
+    public Slice(String tableName, String[] colNames, String[] labels) {
+        this.tableName = tableName;
         this.colNames = colNames;
         this.labels = labels;
         this.points = new SlicePoint[0];
@@ -32,7 +34,8 @@ public class Slice {
      * @param labels - значения соответствующих столбцов
      * @param points - список точек разреза
      */
-    public Slice(String[] colNames, String[] labels, SlicePoint[] points) {
+    public Slice(String tableName, String[] colNames, String[] labels, SlicePoint[] points) {
+        this.tableName = tableName;
         this.colNames = colNames;
         this.labels = labels;
         this.points = points;
@@ -52,7 +55,7 @@ public class Slice {
             accumulatedValue += points[i].value * points[i].amount;
             pointsAccumulated[i] = new SlicePoint(accumulatedValue, 1, points[i].date);
         }
-        return new Slice(colNames, labels, pointsAccumulated);
+        return new Slice(tableName, colNames, labels, pointsAccumulated);
     }
 
     /**

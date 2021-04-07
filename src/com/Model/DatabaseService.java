@@ -123,11 +123,11 @@ public class DatabaseService {
                 points[i] = new SlicePoint(res.getLong("value_1"), res.getLong("amount"), res.getTimestamp("first_date"));
                 i++;
             }
-            return new Slice(colNames, labels, points);
+            return new Slice(tableName, colNames, labels, points);
         } catch (SQLException ex) {
             handleSQLException(ex);
         }
-        return new Slice(colNames, labels);
+        return new Slice(tableName, colNames, labels);
     }
 
     /**

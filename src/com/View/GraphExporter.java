@@ -33,7 +33,7 @@ public class GraphExporter {
         if(slice.points.length < 2) {
             return false;
         }
-        StringBuilder directoryName = new StringBuilder("graphs/accumulated/");
+        StringBuilder directoryName = new StringBuilder("graphs/" + slice.tableName + "/accumulated/");
         for(int i = 0; i < slice.colNames.length; i++) {
             directoryName.append(slice.colNames[i]);
             if(i < slice.colNames.length - 1) {
@@ -80,7 +80,7 @@ public class GraphExporter {
             return false;
         }
         StringBuilder chartTitle = new StringBuilder();
-        StringBuilder directoryName = new StringBuilder("graphs/decrease/");
+        StringBuilder directoryName = new StringBuilder("graphs/" + slice.tableName + "/decrease/");
         for(int i = 0; i < slice.colNames.length; i++) {
             directoryName.append(slice.colNames[i]);
             if(i < slice.colNames.length - 1) {
