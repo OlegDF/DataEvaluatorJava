@@ -32,18 +32,7 @@ public class DataController {
     }
 
     public void parseCsv() {
-        dataRetriever.csvToDatabase("data_v1.csv");
-    }
-
-    /**
-     * Получает разрезы данных, сгруппированных по типу и единице измерения, генерирует граф из каждого разреза и
-     * сохраняет граф в виде изображения .png.
-     */
-    public void exportTypeUnitGraphs() {
-        List<Slice> slices = sliceRetriever.getTypeUnitSlices();
-        for(Slice slice: slices) {
-            graphExporter.exportGraphToPng(slice);
-        }
+        dataRetriever.csvToDatabase("data_v06_20210130-20210203.csv");
     }
 
     /**
@@ -51,9 +40,23 @@ public class DataController {
      * генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
      */
     public void exportTypeUnitGraphsAccumulated() {
-        List<Slice> slices = sliceRetriever.getTypeUnitSlicesAccumulated();
+        List<Slice> slices = sliceRetriever.getTwoCategorySlicesAccumulated("category_3", "category_4");
         for(Slice slice: slices) {
             graphExporter.exportGraphToPng(slice);
+        }
+    }
+
+
+    /**
+     * Получает разрезы данных, сгруппированных по всем сочетаниям двух категорий, делает накопление для каждого разреза,
+     * генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
+     */
+    public void exportDoubleCombinationsGraphsAccumulated() {
+        List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated();
+        for(List<Slice> slicesList: slices) {
+            for(Slice slice: slicesList) {
+                graphExporter.exportGraphToPng(slice);
+            }
         }
     }
 
@@ -62,13 +65,30 @@ public class DataController {
      * получает список интервалов, на которых значение убывает, сортирует его по величине убывания, генерирует граф из
      * каждого разреза и сохраняет граф в виде изображения .png.
      */
-    public void exportTypeUnitDecreases() {
-        List<Slice> slices = sliceRetriever.getTypeUnitSlicesAccumulated();
+    public void exportTypeUnitDecreaseGraphs() {
+        List<Slice> slices = sliceRetriever.getTwoCategorySlicesAccumulated("category_3", "category_4");
         List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slices);
         int intervalId = 0;
         for(SuspiciousInterval interval: intervals) {
             graphExporter.exportDecreaseGraphToPng(interval, intervalId);
             intervalId++;
+        }
+    }
+
+    /**
+     * Получает разрезы данных, сгруппированных по всем сочетаниям двух категорий, делает накопление для каждого разреза,
+     * получает список интервалов, на которых значение убывает, сортирует его по величине убывания, генерирует граф из
+     * каждого разреза и сохраняет граф в виде изображения .png.
+     */
+    public void exportDoubleCombinationsDecreasesToDatabase() {
+        List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated();
+        for(List<Slice> slicesList: slices) {
+            List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList);
+            int intervalId = 0;
+            for(SuspiciousInterval interval: intervals) {
+                graphExporter.exportDecreaseGraphToPng(interval, intervalId);
+                intervalId++;
+            }
         }
     }
 

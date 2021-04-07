@@ -33,25 +33,24 @@ public class GraphExporter {
         if(slice.points.length < 2) {
             return false;
         }
-        StringBuilder chartTitle = new StringBuilder();
-        StringBuilder imageName = new StringBuilder("graphs/type_unit/");
+        StringBuilder directoryName = new StringBuilder("graphs/accumulated/");
         for(int i = 0; i < slice.colNames.length; i++) {
-            chartTitle.append(slice.labels[i]);
+            directoryName.append(slice.colNames[i]);
+            if(i < slice.colNames.length - 1) {
+                directoryName.append("_");
+            }
+        }
+        directoryName.append("/");
+        StringBuilder imageName = new StringBuilder(directoryName);
+        for(int i = 0; i < slice.colNames.length; i++) {
             imageName.append(slice.labels[i]);
             if(i < slice.colNames.length - 1) {
-                chartTitle.append("; ");
                 imageName.append("_");
             }
         }
         imageName.append(".png");
-        TimeSeries series = new TimeSeries("Value Over Time");
-        for(SlicePoint point: slice.points) {
-            series.addOrUpdate(new Millisecond(point.date), point.value * point.amount);
-        }
-        TimeSeriesCollection dataset = new TimeSeriesCollection();
-        dataset.addSeries(series);
-        JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle.toString(), "Date", "Value", dataset);
-        File path = new File("graphs/type_unit/");
+        JFreeChart chart = getGraph(slice);
+        File path = new File(directoryName.toString());
         path.mkdirs();
         clearDirectory(path);
         try {
@@ -81,7 +80,15 @@ public class GraphExporter {
             return false;
         }
         StringBuilder chartTitle = new StringBuilder();
-        StringBuilder imageName = new StringBuilder("graphs/type_unit_decreasing/");
+        StringBuilder directoryName = new StringBuilder("graphs/decrease/");
+        for(int i = 0; i < slice.colNames.length; i++) {
+            directoryName.append(slice.colNames[i]);
+            if(i < slice.colNames.length - 1) {
+                directoryName.append("_");
+            }
+        }
+        directoryName.append("/");
+        StringBuilder imageName = new StringBuilder(directoryName);
         for(int i = 0; i < slice.colNames.length; i++) {
             chartTitle.append(slice.labels[i]);
             imageName.append(slice.labels[i]);
@@ -91,6 +98,37 @@ public class GraphExporter {
             }
         }
         imageName.append("_").append(intervalId).append(".png");
+        JFreeChart chart = getDecreaseChart(interval);
+        File path = new File(directoryName.toString());
+        path.mkdirs();
+        clearDirectory(path);
+        try {
+            OutputStream out = new FileOutputStream(imageName.toString());
+            ChartUtils.writeChartAsPNG(out,
+                    chart,
+                    800,
+                    600);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+    private JFreeChart getGraph(Slice slice) {
+        String chartTitle = getChartTitle(slice);
+        TimeSeries series = new TimeSeries("Value Over Time");
+        for(SlicePoint point: slice.points) {
+            series.addOrUpdate(new Millisecond(point.date), point.value * point.amount);
+        }
+        TimeSeriesCollection dataset = new TimeSeriesCollection();
+        dataset.addSeries(series);
+        return ChartFactory.createTimeSeriesChart(chartTitle, "Date", "Value", dataset);
+    }
+
+    private JFreeChart getDecreaseChart(SuspiciousInterval interval) {
+        Slice slice = interval.slice;
+        String chartTitle = getChartTitle(slice);
         TimeSeries mainSeries = new TimeSeries("Value Before");
         for(int i = 0; i < interval.pos1; i++) {
             mainSeries.addOrUpdate(new Millisecond(slice.points[i].date), slice.points[i].value * slice.points[i].amount);
@@ -107,21 +145,18 @@ public class GraphExporter {
         dataset.addSeries(mainSeries);
         dataset.addSeries(decreaseSeries);
         dataset.addSeries(mainSeries2);
-        JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle.toString(), "Date", "Value", dataset);
-        File path = new File("graphs/type_unit_decreasing/");
-        path.mkdirs();
-        clearDirectory(path);
-        try {
-            OutputStream out = new FileOutputStream(imageName.toString());
-            ChartUtils.writeChartAsPNG(out,
-                    chart,
-                    800,
-                    600);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            return false;
+        return ChartFactory.createTimeSeriesChart(chartTitle.toString(), "Date", "Value", dataset);
+    }
+
+    private String getChartTitle(Slice slice) {
+        StringBuilder chartTitle = new StringBuilder();
+        for(int i = 0; i < slice.colNames.length; i++) {
+            chartTitle.append(slice.labels[i]);
+            if(i < slice.colNames.length - 1) {
+                chartTitle.append("; ");
+            }
         }
-        return true;
+        return chartTitle.toString();
     }
 
     private void clearDirectory(File path) {

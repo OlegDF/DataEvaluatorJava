@@ -8,9 +8,9 @@ public class MainExportGraphs {
 
         DataController dataController = new DataController();
 
-        dataController.exportTypeUnitGraphsAccumulated();
+        dataController.exportDoubleCombinationsGraphsAccumulated();
 
-        dataController.exportTypeUnitDecreases();
+        dataController.exportDoubleCombinationsDecreasesToDatabase();
 
         dataController.close();
 

@@ -44,7 +44,7 @@ public class DatabaseService {
      */
     public void createTable(String tableName, String[] colNames, String[] colTypes) {
         try {
-            connection.createStatement().executeQuery("DROP TABLE IF EXISTS " + tableName + ";");
+            connection.createStatement().executeUpdate("DROP TABLE IF EXISTS " + tableName + ";");
             StringBuilder query = new StringBuilder("CREATE TABLE " + tableName + " (");
             for(int i = 0; i < colNames.length; i++) {
                 query.append(colNames[i]).append(" ").append(colTypes[i]);
@@ -53,7 +53,7 @@ public class DatabaseService {
                 }
             }
             query.append(");");
-            connection.createStatement().executeQuery(query.toString());
+            connection.createStatement().executeUpdate(query.toString());
         } catch (SQLException ex) {
             handleSQLException(ex);
         }
@@ -78,7 +78,7 @@ public class DatabaseService {
             }
             query.append(") VALUES (");
             for(int i = 0; i < row.length; i++) {
-                if(colTypes[i].equals("string") || colTypes[i].equals("timestamptz")) {
+                if(colTypes[i].equals("varchar(255)") || colTypes[i].equals("timestamptz")) {
                     query.append("'").append(row[i]).append("'");
                 } else {
                     query.append(row[i]);
@@ -88,7 +88,7 @@ public class DatabaseService {
                 }
             }
             query.append(");");
-            connection.createStatement().executeQuery(query.toString());
+            connection.createStatement().executeUpdate(query.toString());
         } catch (SQLException ex) {
             handleSQLException(ex);
         }
@@ -151,6 +151,32 @@ public class DatabaseService {
                 i++;
             }
             return labels;
+        } catch (SQLException ex) {
+            handleSQLException(ex);
+        }
+        return new String[0];
+    }
+
+    /**
+     * Получает список названий столбцов в определенной таблице.
+     *
+     * @param tableName - название таблицы
+     * @return список столбцов в строковом виде
+     */
+    public String[] getColumnNames(String tableName) {
+        try {
+            String query = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "';";
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query);
+            res.last();
+            int length = res.getRow();
+            String[] colNames = new String[length];
+            res.beforeFirst();
+            int i = 0;
+            while(res.next()) {
+                colNames[i] = res.getString("column_name");
+                i++;
+            }
+            return colNames;
         } catch (SQLException ex) {
             handleSQLException(ex);
         }
