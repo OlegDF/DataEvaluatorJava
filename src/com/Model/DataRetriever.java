@@ -27,15 +27,15 @@ public class DataRetriever {
         try {
             BufferedReader lineReader = new BufferedReader(new FileReader(csvPath));
 
-            String[] colNames = lineReader.readLine().split(";");
+            String[] colNames = lineReader.readLine().split(";", -1);
             String rowLine = lineReader.readLine();
-            String[] row = rowLine.split(";");
+            String[] row = rowLine.split(";", -1);
             String[] colTypes = getColTypes(row);
 
             databaseService.createTable(tableName, colNames, colTypes);
 
             while(rowLine != null) {
-                row = rowLine.split(";");
+                row = rowLine.split(";", -1);
                 databaseService.insertData(tableName, colNames, colTypes, row);
                 rowLine = lineReader.readLine();
             }
@@ -66,7 +66,7 @@ public class DataRetriever {
             } else if(timestampPattern.matcher(firstRow[i]).matches()) {
                 colTypes[i] = "timestamptz";
             } else {
-                colTypes[i] = "string";
+                colTypes[i] = "varchar(255)";
             }
         }
         return colTypes;
