@@ -105,13 +105,7 @@ public class SliceRetriever {
      * @return список разрезов с накоплением
      */
     public List<List<Slice>> getSingleCategorySlicesAccumulated(String tableName) {
-        String[] colNames = databaseService.getColumnNames(tableName);
-        List<String> categoryNames = new ArrayList<>();
-        for(String colName: colNames) {
-            if(colName.startsWith("category_")) {
-                categoryNames.add(colName);
-            }
-        }
+        List<String> categoryNames = databaseService.getCategoryNames(tableName);
         List<List<Slice>> res = new ArrayList<>();
         for(String categoryName: categoryNames) {
             res.add(getCategorySlicesAccumulated(tableName, categoryName));
@@ -127,13 +121,7 @@ public class SliceRetriever {
      * @return список разрезов с накоплением
      */
     public List<List<Slice>> getDoubleCombinationsSlicesAccumulated(String tableName) {
-        String[] colNames = databaseService.getColumnNames(tableName);
-        List<String> categoryNames = new ArrayList<>();
-        for(String colName: colNames) {
-            if(colName.startsWith("category_")) {
-                categoryNames.add(colName);
-            }
-        }
+        List<String> categoryNames = databaseService.getCategoryNames(tableName);
         List<List<Slice>> res = new ArrayList<>();
         for(String categoryName: categoryNames) {
             for(String categoryName2: categoryNames) {

@@ -11,8 +11,8 @@ public class MainExportGraphs {
         dataController.exportSingleCategoryGraphsAccumulated("data_v06");
         dataController.exportDoubleCombinationsGraphsAccumulated("data_v06");
 
-        dataController.exportSingleCategoryDecreaseGraphs("data_v06");
-        dataController.exportDoubleCombinationsDecreaseGraphs("data_v06");
+        dataController.exportSingleCategoryDecreaseGraphs("data_v06", 1d/16, 1d/32);
+        dataController.exportDoubleCombinationsDecreaseGraphs("data_v06", 1d/16, 1d/32);
 
         dataController.close();
 

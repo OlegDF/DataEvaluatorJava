@@ -6,11 +6,15 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Сервис, который управляет запросами к базе данных Postgres.
  */
 public class DatabaseService {
+
+    public final String labelNotPresent = "NOT_APPLICABLE";
 
     private Connection connection = null;
 
@@ -158,29 +162,67 @@ public class DatabaseService {
     }
 
     /**
-     * Получает список названий столбцов в определенной таблице.
+     * Получает список названий столбцов с категориями в определенной таблице.
      *
      * @param tableName - название таблицы
      * @return список столбцов в строковом виде
      */
-    public String[] getColumnNames(String tableName) {
+    public List<String> getCategoryNames(String tableName) {
         try {
             String query = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "';";
             ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query);
             res.last();
-            int length = res.getRow();
-            String[] colNames = new String[length];
+            List<String> categoryNames = new ArrayList<>();
             res.beforeFirst();
-            int i = 0;
             while(res.next()) {
-                colNames[i] = res.getString("column_name");
-                i++;
+                String colName = res.getString("column_name");
+                if(colName.startsWith("category_")) {
+                    categoryNames.add(colName);
+                }
             }
-            return colNames;
+            return categoryNames;
         } catch (SQLException ex) {
             handleSQLException(ex);
         }
-        return new String[0];
+        return new ArrayList<>();
+    }
+
+    /**
+     * Вставляет в таблицу интервалов с уменьшениями новую строку с указанными значениями данных.
+     *
+     * @param tableName - название таблицы
+     * @param colNames - названия столбцов таблицы
+     * @param labels - значения, по которым группировался интервал
+     */
+    public void insertDecrease(String tableName, String[] colNames, String[] labels, int pos1, int pos2, double decreaseScore) {
+        try {
+            StringBuilder query = new StringBuilder("INSERT INTO " + tableName + "(");
+            for(int i = 0; i < colNames.length; i++) {
+                query.append(colNames[i]);
+                if(i < colNames.length - 1) {
+                    query.append(", ");
+                }
+            }
+            query.append(", pos1, pos2, decrease_score");
+            query.append(") VALUES (");
+            for(int i = 0; i < labels.length; i++) {
+                if(labels[i].startsWith("'")) {
+                    query.append(labels[i]);
+                } else {
+                    query.append("'").append(labels[i]).append("'");
+                }
+                if(i < labels.length - 1) {
+                    query.append(", ");
+                }
+            }
+            query.append(", ").append(pos1);
+            query.append(", ").append(pos2);
+            query.append(", ").append(decreaseScore);
+            query.append(");");
+            connection.createStatement().executeUpdate(query.toString());
+        } catch (SQLException ex) {
+            handleSQLException(ex);
+        }
     }
 
     /**

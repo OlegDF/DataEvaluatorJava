@@ -96,16 +96,21 @@ public class DataController {
     }
 
     /**
-     * Получает разрезы данных, сгруппированных по всем сочетаниям двух категорий, делает накопление для каждого разреза,
+     * Получает разрезы данных, сгруппированных по всем значениям одной категории, делает накопление для каждого разреза,
      * получает список интервалов, на которых значение убывает, сортирует его по величине убывания, генерирует граф из
      * каждого разреза и сохраняет граф в виде изображения .png.
      *
      * @param tableName - название таблицы, из которой необходимо получать данные
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля разности между максимальным и минимальным значением
+     *                        на всем разрезе, от 0 до 1)
      */
-    public void exportSingleCategoryDecreaseGraphs(String tableName) {
+    public void exportSingleCategoryDecreaseGraphs(String tableName, double minIntervalMult, double thresholdMult) {
         List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName);
         for(List<Slice> slicesList: slices) {
-            List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, 1d/32, 1d/16);
+            List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, minIntervalMult, thresholdMult);
             int intervalId = 0;
             for(SuspiciousInterval interval: intervals) {
                 graphExporter.exportDecreaseGraphToPng(interval, intervalId);
@@ -120,15 +125,112 @@ public class DataController {
      * каждого разреза и сохраняет граф в виде изображения .png.
      *
      * @param tableName - название таблицы, из которой необходимо получать данные
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля разности между максимальным и минимальным значением
+     *                        на всем разрезе, от 0 до 1)
      */
-    public void exportDoubleCombinationsDecreaseGraphs(String tableName) {
+    public void exportDoubleCombinationsDecreaseGraphs(String tableName, double minIntervalMult, double thresholdMult) {
         List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName);
         for(List<Slice> slicesList: slices) {
-            List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, 1d/16, 1d/8);
+            List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, minIntervalMult, thresholdMult);
             int intervalId = 0;
             for(SuspiciousInterval interval: intervals) {
                 graphExporter.exportDecreaseGraphToPng(interval, intervalId);
                 intervalId++;
+            }
+        }
+    }
+
+    /**
+     * Создает таблицу, в которую будут записываться интервалы с уменьшением значений для определенной таблицы.
+     *
+     * @param tableName - название таблицы, из будет которой необходимо получать данные
+     */
+    public void createDecreasesTable(String tableName) {
+        List<String> categoryNames = dbService.getCategoryNames(tableName);
+        final String[] colNames = new String[categoryNames.size() + 3];
+        final String[] colTypes = new String[categoryNames.size() + 3];
+        for(int i = 0; i < categoryNames.size(); i++) {
+            colNames[i] = categoryNames.get(i);
+            colTypes[i] = "varchar(255)";
+        }
+        colNames[colNames.length - 3] = "pos1";
+        colTypes[colNames.length - 3] = "int8";
+        colNames[colNames.length - 2] = "pos2";
+        colTypes[colNames.length - 2] = "int8";
+        colNames[colNames.length - 1] = "decrease_score";
+        colTypes[colNames.length - 1] = "float";
+        dbService.createTable(tableName + "_decreases", colNames, colTypes);
+    }
+
+    /**
+     * Получает разрезы данных, сгруппированных по всем значениям одной категории, делает накопление для каждого разреза,
+     * получает список интервалов, на которых значение убывает, сортирует его по величине убывания и записывает интервал
+     * в базу данных.
+     *
+     * @param tableName - название таблицы, из которой необходимо получать данные
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля разности между максимальным и минимальным значением
+     *                        на всем разрезе, от 0 до 1)
+     */
+    public void exportSingleCategoryDecreasesToDB(String tableName, double minIntervalMult, double thresholdMult) {
+        String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
+        List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName);
+        for(List<Slice> slicesList: slices) {
+            List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, minIntervalMult, thresholdMult);
+            for(SuspiciousInterval interval: intervals) {
+                Slice slice = interval.slice;
+                String[] labels = new String[colNames.length];
+                for(int i = 0; i < colNames.length; i++) {
+                    labels[i] = dbService.labelNotPresent;
+                }
+                for(int i = 0; i < colNames.length; i++) {
+                    for(int j = 0; j < slice.colNames.length; j++) {
+                        if(colNames[i].equals(slice.colNames[j])) {
+                            labels[i] = slice.labels[j];
+                        }
+                    }
+                }
+                dbService.insertDecrease(tableName + "_decreases", colNames, labels, interval.pos1, interval.pos2, interval.getDecreaseScore());
+            }
+        }
+    }
+
+    /**
+     * Получает разрезы данных, сгруппированных по всем сочетаниям двух категорий, делает накопление для каждого разреза,
+     * получает список интервалов, на которых значение убывает, сортирует его по величине убывания и записывает интервал
+     * в базу данных.
+     *
+     * @param tableName - название таблицы, из которой необходимо получать данные
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля разности между максимальным и минимальным значением
+     *                        на всем разрезе, от 0 до 1)
+     */
+    public void exportDoubleCombinationsDecreasesToDB(String tableName, double minIntervalMult, double thresholdMult) {
+        String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
+        List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName);
+        for(List<Slice> slicesList: slices) {
+            List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, minIntervalMult, thresholdMult);
+            for(SuspiciousInterval interval: intervals) {
+                Slice slice = interval.slice;
+                String[] labels = new String[colNames.length];
+                for(int i = 0; i < colNames.length; i++) {
+                    labels[i] = dbService.labelNotPresent;
+                }
+                for(int i = 0; i < colNames.length; i++) {
+                    for(int j = 0; j < slice.colNames.length; j++) {
+                        if(colNames[i].equals(slice.colNames[j])) {
+                            labels[i] = slice.labels[j];
+                        }
+                    }
+                }
+                dbService.insertDecrease(tableName + "_decreases", colNames, labels, interval.pos1, interval.pos2, interval.getDecreaseScore());
             }
         }
     }
