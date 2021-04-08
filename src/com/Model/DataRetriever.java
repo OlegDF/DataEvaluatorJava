@@ -10,8 +10,6 @@ import java.util.regex.Pattern;
  */
 public class DataRetriever {
 
-    final String tableName = "data";
-
     private final DatabaseService databaseService;
 
     public DataRetriever(DatabaseService databaseService) {
@@ -20,12 +18,13 @@ public class DataRetriever {
 
     /**
      * Обрабатывает содержимое файла csv и записывает его содержимое в базу данных, с которой установлена связь.
+     * Название файла становится названием новой таблицы, в которую записываются данные.
      *
-     * @param csvPath - название файла csv/путь к нему
+     * @param tableName - название файла csv/путь к нему
      */
-    public void csvToDatabase(String csvPath) {
+    public void csvToDatabase(String tableName) {
         try {
-            BufferedReader lineReader = new BufferedReader(new FileReader(csvPath));
+            BufferedReader lineReader = new BufferedReader(new FileReader(tableName + ".csv"));
 
             String[] colNames = lineReader.readLine().split(";", -1);
             String rowLine = lineReader.readLine();
@@ -46,7 +45,7 @@ public class DataRetriever {
 
     /**
      * Определяет типы столбцов новой таблицы по формату данных в первой строке файла. Возможные типы - целое число
-     * (int8), десятичное число (float), дата/время (timestamptz) и строка (string).
+     * (int8), десятичное число (float), дата/время (timestamptz) и строка (varchar).
      *
      * @param firstRow - первая строка, содержащая данные для вставки в таблицу
      * @return список названий типов данных

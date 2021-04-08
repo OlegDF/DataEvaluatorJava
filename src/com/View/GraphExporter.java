@@ -14,13 +14,18 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Date;
 
 /**
  * Класс, который экспортирует разрезы данных и интервалы в виде изображений на диске.
  */
 public class GraphExporter {
 
-    public GraphExporter() {}
+    private final Date currentDate;
+
+    public GraphExporter() {
+        currentDate = new Date();
+    }
 
     /**
      * Генерирует граф из заданного разреза и сохраняет граф в виде изображения .png. Ничего не происходит, если
@@ -33,7 +38,7 @@ public class GraphExporter {
         if(slice.points.length < 2) {
             return false;
         }
-        StringBuilder directoryName = new StringBuilder("graphs/accumulated/");
+        StringBuilder directoryName = new StringBuilder("graphs/" + currentDate.getTime() + "/" + slice.tableName + "/accumulated/");
         for(int i = 0; i < slice.colNames.length; i++) {
             directoryName.append(slice.colNames[i]);
             if(i < slice.colNames.length - 1) {
@@ -52,7 +57,6 @@ public class GraphExporter {
         JFreeChart chart = getGraph(slice);
         File path = new File(directoryName.toString());
         path.mkdirs();
-        clearDirectory(path);
         try {
             OutputStream out = new FileOutputStream(imageName.toString());
             ChartUtils.writeChartAsPNG(out,
@@ -80,7 +84,7 @@ public class GraphExporter {
             return false;
         }
         StringBuilder chartTitle = new StringBuilder();
-        StringBuilder directoryName = new StringBuilder("graphs/decrease/");
+        StringBuilder directoryName = new StringBuilder("graphs/" + currentDate.getTime() + "/" + slice.tableName + "/decrease/");
         for(int i = 0; i < slice.colNames.length; i++) {
             directoryName.append(slice.colNames[i]);
             if(i < slice.colNames.length - 1) {
@@ -88,7 +92,7 @@ public class GraphExporter {
             }
         }
         directoryName.append("/");
-        StringBuilder imageName = new StringBuilder(directoryName);
+        StringBuilder imageName = new StringBuilder(directoryName).append(intervalId).append("_");
         for(int i = 0; i < slice.colNames.length; i++) {
             chartTitle.append(slice.labels[i]);
             imageName.append(slice.labels[i]);
@@ -97,11 +101,10 @@ public class GraphExporter {
                 imageName.append("_");
             }
         }
-        imageName.append("_").append(intervalId).append(".png");
+        imageName.append(".png");
         JFreeChart chart = getDecreaseChart(interval);
         File path = new File(directoryName.toString());
         path.mkdirs();
-        clearDirectory(path);
         try {
             OutputStream out = new FileOutputStream(imageName.toString());
             ChartUtils.writeChartAsPNG(out,

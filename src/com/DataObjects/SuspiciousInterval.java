@@ -26,7 +26,7 @@ public class SuspiciousInterval {
         }
         return (double)(slice.points[pos2].value - slice.points[pos1].value) *
                 (slice.points[pos2].value - slice.points[pos1].value) /
-                (slice.valueRange * slice.valueRange);
+                (slice.valueRange * slice.valueRange) / Math.sqrt((double)(pos2 - pos1) / slice.points.length);
     }
 
     /**
