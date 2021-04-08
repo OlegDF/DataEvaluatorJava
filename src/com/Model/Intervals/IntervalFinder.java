@@ -17,6 +17,6 @@ public interface IntervalFinder {
      * @param slices - список разрезов, на которых ведется поиск
      * @return список интервалов
      */
-    public List<SuspiciousInterval> getDecreasingIntervals(List<Slice> slices);
+    public List<SuspiciousInterval> getDecreasingIntervals(List<Slice> slices, double minIntervalMult, double thresholdMult);
 
 }

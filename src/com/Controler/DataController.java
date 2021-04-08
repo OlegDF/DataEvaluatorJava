@@ -87,7 +87,7 @@ public class DataController {
      */
     public void exportTypeUnitDecreaseGraphs(String tableName) {
         List<Slice> slices = sliceRetriever.getTwoCategorySlicesAccumulated(tableName, "category_3", "category_4");
-        List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slices);
+        List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slices, 1d/16, 1d/8);
         int intervalId = 0;
         for(SuspiciousInterval interval: intervals) {
             graphExporter.exportDecreaseGraphToPng(interval, intervalId);
@@ -105,10 +105,10 @@ public class DataController {
     public void exportSingleCategoryDecreaseGraphs(String tableName) {
         List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName);
         for(List<Slice> slicesList: slices) {
-            List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList);
+            List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, 1d/32, 1d/16);
             int intervalId = 0;
             for(SuspiciousInterval interval: intervals) {
-                graphExporter.exportDecreaseGraphToPng(interval, intervalId);
+                System.out.println(intervalId + " " + graphExporter.exportDecreaseGraphToPng(interval, intervalId));
                 intervalId++;
             }
         }
@@ -124,10 +124,10 @@ public class DataController {
     public void exportDoubleCombinationsDecreaseGraphs(String tableName) {
         List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName);
         for(List<Slice> slicesList: slices) {
-            List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList);
+            List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, 1d/16, 1d/8);
             int intervalId = 0;
             for(SuspiciousInterval interval: intervals) {
-                graphExporter.exportDecreaseGraphToPng(interval, intervalId);
+                System.out.println(intervalId + " " + graphExporter.exportDecreaseGraphToPng(interval, intervalId));
                 intervalId++;
             }
         }

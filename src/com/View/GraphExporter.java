@@ -52,7 +52,6 @@ public class GraphExporter {
         JFreeChart chart = getGraph(slice);
         File path = new File(directoryName.toString());
         path.mkdirs();
-        clearDirectory(path);
         try {
             OutputStream out = new FileOutputStream(imageName.toString());
             ChartUtils.writeChartAsPNG(out,
@@ -88,7 +87,7 @@ public class GraphExporter {
             }
         }
         directoryName.append("/");
-        StringBuilder imageName = new StringBuilder(directoryName);
+        StringBuilder imageName = new StringBuilder(directoryName).append(intervalId).append("_");
         for(int i = 0; i < slice.colNames.length; i++) {
             chartTitle.append(slice.labels[i]);
             imageName.append(slice.labels[i]);
@@ -97,11 +96,10 @@ public class GraphExporter {
                 imageName.append("_");
             }
         }
-        imageName.append("_").append(intervalId).append(".png");
+        imageName.append(".png");
         JFreeChart chart = getDecreaseChart(interval);
         File path = new File(directoryName.toString());
         path.mkdirs();
-        clearDirectory(path);
         try {
             OutputStream out = new FileOutputStream(imageName.toString());
             ChartUtils.writeChartAsPNG(out,

@@ -23,15 +23,14 @@ public class SimpleIntervalFinder implements IntervalFinder {
      * @return список интервалов
      */
     @Override
-    public List<SuspiciousInterval> getDecreasingIntervals(List<Slice> slices) {
+    public List<SuspiciousInterval> getDecreasingIntervals(List<Slice> slices, double minIntervalMult, double thresholdMult) {
         List<SuspiciousInterval> res = new ArrayList<>();
         for(Slice slice: slices) {
             final int chunkLength = Integer.max(slice.points.length / 1024, 1);
-            final int minIntervalLength = Integer.max(slice.points.length / 16, 1);
-            final int maxIntervalLength = Integer.max(slice.points.length / 4, 1);
-            final long threshold = slice.valueRange / 16;
+            final int minIntervalLength = Integer.max((int)Math.floor(slice.points.length * minIntervalMult), 1);
+            final long threshold = (long)Math.floor(slice.valueRange * thresholdMult);
             for(int pos1 = 0; pos1 < slice.points.length - 1; pos1 += chunkLength) {
-                for(int pos2 = pos1 + minIntervalLength; pos2 < slice.points.length && pos2 <= pos1 + maxIntervalLength; pos2 += chunkLength) {
+                for(int pos2 = pos1 + minIntervalLength; pos2 < slice.points.length; pos2 += chunkLength) {
                     if(slice.isIntervalDecreasing(pos1, pos2, threshold)) {
                         res.add(new SuspiciousInterval(slice, pos1, pos2));
                     }
