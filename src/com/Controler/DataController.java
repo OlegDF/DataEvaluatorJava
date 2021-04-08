@@ -108,7 +108,7 @@ public class DataController {
             List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, 1d/32, 1d/16);
             int intervalId = 0;
             for(SuspiciousInterval interval: intervals) {
-                System.out.println(intervalId + " " + graphExporter.exportDecreaseGraphToPng(interval, intervalId));
+                graphExporter.exportDecreaseGraphToPng(interval, intervalId);
                 intervalId++;
             }
         }
@@ -127,7 +127,7 @@ public class DataController {
             List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, 1d/16, 1d/8);
             int intervalId = 0;
             for(SuspiciousInterval interval: intervals) {
-                System.out.println(intervalId + " " + graphExporter.exportDecreaseGraphToPng(interval, intervalId));
+                graphExporter.exportDecreaseGraphToPng(interval, intervalId);
                 intervalId++;
             }
         }

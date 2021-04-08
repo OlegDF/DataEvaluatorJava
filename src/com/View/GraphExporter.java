@@ -14,13 +14,18 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Date;
 
 /**
  * Класс, который экспортирует разрезы данных и интервалы в виде изображений на диске.
  */
 public class GraphExporter {
 
-    public GraphExporter() {}
+    private final Date currentDate;
+
+    public GraphExporter() {
+        currentDate = new Date();
+    }
 
     /**
      * Генерирует граф из заданного разреза и сохраняет граф в виде изображения .png. Ничего не происходит, если
@@ -33,7 +38,7 @@ public class GraphExporter {
         if(slice.points.length < 2) {
             return false;
         }
-        StringBuilder directoryName = new StringBuilder("graphs/" + slice.tableName + "/accumulated/");
+        StringBuilder directoryName = new StringBuilder("graphs/" + currentDate.getTime() + "/" + slice.tableName + "/accumulated/");
         for(int i = 0; i < slice.colNames.length; i++) {
             directoryName.append(slice.colNames[i]);
             if(i < slice.colNames.length - 1) {
@@ -79,7 +84,7 @@ public class GraphExporter {
             return false;
         }
         StringBuilder chartTitle = new StringBuilder();
-        StringBuilder directoryName = new StringBuilder("graphs/" + slice.tableName + "/decrease/");
+        StringBuilder directoryName = new StringBuilder("graphs/" + currentDate.getTime() + "/" + slice.tableName + "/decrease/");
         for(int i = 0; i < slice.colNames.length; i++) {
             directoryName.append(slice.colNames[i]);
             if(i < slice.colNames.length - 1) {
