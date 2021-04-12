@@ -284,7 +284,7 @@ public class DatabaseService {
             }
             query.append(" AND relative_width > ").append(minIntervalMult);
             query.append(" AND -relative_diff > ").append(thresholdMult);
-            query.append(" ORDER BY decrease_score DESC;");
+            query.append(";");
             ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
             res.last();
             List<SuspiciousInterval> intervals = new ArrayList<>();
