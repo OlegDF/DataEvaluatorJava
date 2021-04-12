@@ -118,7 +118,7 @@ public class GraphExporter {
         return true;
     }
 
-    private JFreeChart getGraph(Slice slice) {
+    public JFreeChart getGraph(Slice slice) {
         String chartTitle = getChartTitle(slice);
         TimeSeries series = new TimeSeries("Value Over Time");
         for(SlicePoint point: slice.points) {
@@ -129,7 +129,7 @@ public class GraphExporter {
         return ChartFactory.createTimeSeriesChart(chartTitle, "Date", "Value", dataset);
     }
 
-    private JFreeChart getDecreaseChart(SuspiciousInterval interval) {
+    public JFreeChart getDecreaseChart(SuspiciousInterval interval) {
         Slice slice = interval.slice;
         String chartTitle = getChartTitle(slice);
         TimeSeries mainSeries = new TimeSeries("Value Before");

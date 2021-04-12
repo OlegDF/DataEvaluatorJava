@@ -10,7 +10,7 @@ public class Slice {
     public final String[] colNames;
     public final String[] labels;
     public final SlicePoint[] points;
-    public final long valueRange, totalAmount;
+    public final long valueRange, dateRange, totalAmount;
 
     /**
      * Конструктор пустого разреза, для которого не найдено подходящих точек.
@@ -23,8 +23,9 @@ public class Slice {
         this.colNames = colNames;
         this.labels = labels;
         this.points = new SlicePoint[0];
-        this.valueRange = getValueRange();
-        this.totalAmount = getTotalAmount();
+        this.valueRange = 0;
+        this.dateRange = 0;
+        this.totalAmount = 0;
     }
 
     /**
@@ -39,8 +40,15 @@ public class Slice {
         this.colNames = colNames;
         this.labels = labels;
         this.points = points;
-        this.valueRange = getValueRange();
-        this.totalAmount = getTotalAmount();
+        if(points.length > 0) {
+            this.valueRange = getValueRange();
+            this.dateRange = getDateRange();
+            this.totalAmount = getTotalAmount();
+        } else {
+            this.valueRange = 0;
+            this.dateRange = 0;
+            this.totalAmount = 0;
+        }
     }
 
     /**
@@ -68,6 +76,17 @@ public class Slice {
      */
     public boolean isIntervalDecreasing(int pos1, int pos2, long threshold) {
         return points[pos2].value * points[pos2].amount - points[pos1].value * points[pos1].amount < -threshold;
+    }
+
+    /**
+     * Получает расстояние во времени между двумя точками разреза.
+     *
+     * @param pos1 - номер первой точки
+     * @param pos2 - номер второй точки
+     * @return количество единиц времени между двумя точками
+     */
+    public long getDateDistance(int pos1, int pos2) {
+        return points[pos2].date.getTime() - points[pos1].date.getTime();
     }
 
     /**
@@ -103,6 +122,15 @@ public class Slice {
             }
         }
         return max - min;
+    }
+
+    /**
+     * Получает расстояние во времени между первой и последней точками разреза.
+     *
+     * @return количество единиц времени между первой и последней точками
+     */
+    private long getDateRange() {
+        return points[points.length - 1].date.getTime() - points[0].date.getTime();
     }
 
 }

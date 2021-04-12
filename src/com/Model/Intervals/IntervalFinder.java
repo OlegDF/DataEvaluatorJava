@@ -15,8 +15,24 @@ public interface IntervalFinder {
      * порогами длины интервала и меры уменьшения значения. Также сортирует интервалы по величине уменьшения.
      *
      * @param slices - список разрезов, на которых ведется поиск
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля разности между максимальным и минимальным значением
+     *                        на всем разрезе, от 0 до 1)
+     * @param maxIntervals - максимальное количество интервалов, которые вернет метод
+     * @param removeIntersections - если true, то из списка будут убраны интервалы, которые пересекаются с другими
      * @return список интервалов
      */
-    public List<SuspiciousInterval> getDecreasingIntervals(List<Slice> slices, double minIntervalMult, double thresholdMult);
+    List<SuspiciousInterval> getDecreasingIntervals(List<Slice> slices, double minIntervalMult, double thresholdMult,
+                                                           int maxIntervals, boolean removeIntersections);
+
+    /**
+     * Убирает из отсортированного списка интервалы, которые пересекаются друг с другом (в списке остаются интеравлы
+     * с большим уменьшением).
+     *
+     * @param intervals - список интервалов
+     */
+    void removeIntersectingIntervals(List<SuspiciousInterval> intervals);
 
 }

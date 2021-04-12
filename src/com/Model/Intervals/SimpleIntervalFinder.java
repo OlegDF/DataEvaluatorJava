@@ -25,26 +25,31 @@ public class SimpleIntervalFinder implements IntervalFinder {
      * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
      *                        рассматриваться (измеряется как доля разности между максимальным и минимальным значением
      *                        на всем разрезе, от 0 до 1)
+     * @param maxIntervals - максимальное количество интервалов, которые вернет метод
+     * @param removeIntersections - если true, то из списка будут убраны интервалы, которые пересекаются с другими
      * @return список интервалов
      */
     @Override
-    public List<SuspiciousInterval> getDecreasingIntervals(List<Slice> slices, double minIntervalMult, double thresholdMult) {
+    public List<SuspiciousInterval> getDecreasingIntervals(List<Slice> slices, double minIntervalMult, double thresholdMult,
+                                                           int maxIntervals, boolean removeIntersections) {
         List<SuspiciousInterval> res = new ArrayList<>();
         for(Slice slice: slices) {
-            final int chunkLength = Integer.max(slice.points.length / 1024, 1);
-            final int minIntervalLength = Integer.max((int)Math.floor(slice.points.length * minIntervalMult), 1);
+            final int chunkLength = Integer.max(slice.points.length / 128, 1);
+            final int minIntervalLength = Integer.max((int)Math.floor(slice.dateRange * minIntervalMult), 1);
             final long threshold = (long)Math.floor(slice.valueRange * thresholdMult);
             for(int pos1 = 0; pos1 < slice.points.length - 1; pos1 += chunkLength) {
-                for(int pos2 = pos1 + minIntervalLength; pos2 < slice.points.length; pos2 += chunkLength) {
-                    if(slice.isIntervalDecreasing(pos1, pos2, threshold)) {
+                for(int pos2 = pos1 + chunkLength; pos2 < slice.points.length; pos2 += chunkLength) {
+                    if(slice.isIntervalDecreasing(pos1, pos2, threshold) && slice.getDateDistance(pos1, pos2) >= minIntervalLength) {
                         res.add(new SuspiciousInterval(slice, pos1, pos2));
                     }
                 }
             }
         }
         res.sort(Comparator.comparing(SuspiciousInterval::getDecreaseScore).reversed());
-        removeIntersectingIntervals(res);
-        return res.size() >= 32 ? res.subList(0, 32) : res;
+        if(removeIntersections) {
+            removeIntersectingIntervals(res);
+        }
+        return res.size() >= maxIntervals ? res.subList(0, maxIntervals) : res;
     }
 
     /**
@@ -53,7 +58,7 @@ public class SimpleIntervalFinder implements IntervalFinder {
      *
      * @param intervals - список интервалов
      */
-    private void removeIntersectingIntervals(List<SuspiciousInterval> intervals) {
+    public void removeIntersectingIntervals(List<SuspiciousInterval> intervals) {
         for(int i = 0; i < intervals.size() - 1; i++) {
             for(int j = i + 1; j < intervals.size(); j++) {
                 if(intervals.get(i).intersects(intervals.get(j))) {

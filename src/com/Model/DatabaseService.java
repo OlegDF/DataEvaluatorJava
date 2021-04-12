@@ -1,6 +1,7 @@
 package com.Model;
 import com.DataObjects.Slice;
 import com.DataObjects.SlicePoint;
+import com.DataObjects.SuspiciousInterval;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -188,13 +189,13 @@ public class DatabaseService {
     }
 
     /**
-     * Вставляет в таблицу интервалов с уменьшениями новую строку с указанными значениями данных.
+     * Вставляет в таблицу интервалов с уменьшениями новые строки с указанными значениями данных.
      *
      * @param tableName - название таблицы
      * @param colNames - названия столбцов таблицы
-     * @param labels - значения, по которым группировался интервал
+     * @param intervals - вставляемые интервалы
      */
-    public void insertDecrease(String tableName, String[] colNames, String[] labels, int pos1, int pos2, double decreaseScore) {
+    public void insertDecrease(String tableName, String[] colNames, List<SuspiciousInterval> intervals) {
         try {
             StringBuilder query = new StringBuilder("INSERT INTO " + tableName + "(");
             for(int i = 0; i < colNames.length; i++) {
@@ -203,26 +204,120 @@ public class DatabaseService {
                     query.append(", ");
                 }
             }
-            query.append(", pos1, pos2, decrease_score");
+            query.append(", pos1, pos2, decrease_score, relative_width, relative_diff");
             query.append(") VALUES (");
-            for(int i = 0; i < labels.length; i++) {
-                if(labels[i].startsWith("'")) {
-                    query.append(labels[i]);
-                } else {
-                    query.append("'").append(labels[i]).append("'");
+            for(int k = 0; k < intervals.size(); k++) {
+                SuspiciousInterval interval = intervals.get(k);
+                Slice slice = interval.slice;
+                String[] labels = new String[colNames.length];
+                for(int i = 0; i < colNames.length; i++) {
+                    boolean columnIsPresent = false;
+                    for(int j = 0; j < slice.colNames.length; j++) {
+                        if(colNames[i].equals(slice.colNames[j])) {
+                            columnIsPresent = true;
+                            labels[i] = slice.labels[j];
+                        }
+                    }
+                    if(!columnIsPresent) {
+                        labels[i] = labelNotPresent;
+                    }
                 }
-                if(i < labels.length - 1) {
-                    query.append(", ");
+                for(int i = 0; i < labels.length; i++) {
+                    if(labels[i].startsWith("'")) {
+                        query.append(labels[i]);
+                    } else {
+                        query.append("'").append(labels[i]).append("'");
+                    }
+                    if(i < labels.length - 1) {
+                        query.append(", ");
+                    }
+                }
+                query.append(", ").append(interval.pos1);
+                query.append(", ").append(interval.pos2);
+                query.append(", ").append(interval.getDecreaseScore());
+                query.append(", ").append(interval.getRelativeWidth());
+                query.append(", ").append(interval.getRelativeDiff());
+                if(k < intervals.size() - 1) {
+                    query.append("),(");
                 }
             }
-            query.append(", ").append(pos1);
-            query.append(", ").append(pos2);
-            query.append(", ").append(decreaseScore);
             query.append(");");
             connection.createStatement().executeUpdate(query.toString());
         } catch (SQLException ex) {
             handleSQLException(ex);
         }
+    }
+
+    /**
+     * Получает из таблицы интервалов с уменьшениями список интервалов, сгруппированных по определенным столбцам и
+     * отвечающих определенным требованиям.
+     *
+     * @param tableName - название таблицы
+     * @param colNames - названия столбцов таблицы
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля разности между максимальным и минимальным значением
+     *                        на всем разрезе, от 0 до 1)
+     * @return список интервалов
+     */
+    public List<SuspiciousInterval> getDecreases(String tableName, String[] colNames, double minIntervalMult, double thresholdMult) {
+        try {
+            String tableDecName = tableName + "_decreases";
+            StringBuilder query = new StringBuilder("SELECT * FROM ").append(tableDecName).append(" WHERE ");
+            List<String> categoryNames = getCategoryNames(tableDecName);
+            for(int i = 0; i < categoryNames.size(); i++) {
+                boolean categoryIsPresent = false;
+                for(String secondCategory: colNames) {
+                    if(categoryNames.get(i).equals(secondCategory)) {
+                        categoryIsPresent = true;
+                    }
+                }
+                if(categoryIsPresent) {
+                    query.append(categoryNames.get(i)).append(" != ").append("'").append(labelNotPresent).append("'");
+                } else {
+                    query.append(categoryNames.get(i)).append(" = ").append("'").append(labelNotPresent).append("'");
+                }
+                if(i < categoryNames.size() - 1) {
+                    query.append(" AND ");
+                }
+            }
+            query.append(" AND relative_width > ").append(minIntervalMult);
+            query.append(" AND -relative_diff > ").append(thresholdMult);
+            query.append(" ORDER BY decrease_score DESC;");
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
+            res.last();
+            List<SuspiciousInterval> intervals = new ArrayList<>();
+            res.beforeFirst();
+            List<Slice> slices = new ArrayList<>();
+            while(res.next()) {
+                String[] labels = new String[colNames.length];
+                for(int i = 0; i < colNames.length; i++) {
+                    labels[i] = "'" + res.getString(colNames[i]) + "'";
+                }
+                Slice slice = null;
+                for(Slice oldSlice: slices) {
+                    boolean sliceIsTheSame = true;
+                    for(int i = 0; i < labels.length; i++) {
+                        if(!oldSlice.labels[i].equals(labels[i])) {
+                            sliceIsTheSame = false;
+                        }
+                    }
+                    if(sliceIsTheSame) {
+                        slice = oldSlice;
+                    }
+                }
+                if(slice == null) {
+                    slice = getSlice(tableName, colNames, labels).getAccumulation();
+                    slices.add(slice);
+                }
+                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2")));
+            }
+            return intervals;
+        } catch (SQLException ex) {
+            handleSQLException(ex);
+        }
+        return new ArrayList<>();
     }
 
     /**

@@ -9,8 +9,8 @@ public class MainExportDecreasesToDB {
         DataController dataController = new DataController();
         dataController.createDecreasesTable("data_v06");
 
-        dataController.exportSingleCategoryDecreasesToDB("data_v06", 1d/16, 1d/32);
-        dataController.exportDoubleCombinationsDecreasesToDB("data_v06", 1d/16, 1d/32);
+        dataController.exportSingleCategoryDecreasesToDB("data_v06", 0, 0, Integer.MAX_VALUE);
+        dataController.exportDoubleCombinationsDecreasesToDB("data_v06", 0, 0, Integer.MAX_VALUE);
 
         dataController.close();
 
