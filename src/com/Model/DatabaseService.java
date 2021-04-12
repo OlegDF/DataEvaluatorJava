@@ -320,6 +320,139 @@ public class DatabaseService {
         return new ArrayList<>();
     }
 
+
+
+    /**
+     * Вставляет в таблицу интервалов с отсутствием изменений новые строки с указанными значениями данных.
+     *
+     * @param tableName - название таблицы
+     * @param colNames - названия столбцов таблицы
+     * @param intervals - вставляемые интервалы
+     */
+    public void insertConstant(String tableName, String[] colNames, List<SuspiciousInterval> intervals) {
+        try {
+            StringBuilder query = new StringBuilder("INSERT INTO " + tableName + "(");
+            for(int i = 0; i < colNames.length; i++) {
+                query.append(colNames[i]);
+                if(i < colNames.length - 1) {
+                    query.append(", ");
+                }
+            }
+            query.append(", pos1, pos2, relative_width, relative_value_range");
+            query.append(") VALUES (");
+            for(int k = 0; k < intervals.size(); k++) {
+                SuspiciousInterval interval = intervals.get(k);
+                Slice slice = interval.slice;
+                String[] labels = new String[colNames.length];
+                for(int i = 0; i < colNames.length; i++) {
+                    boolean columnIsPresent = false;
+                    for(int j = 0; j < slice.colNames.length; j++) {
+                        if(colNames[i].equals(slice.colNames[j])) {
+                            columnIsPresent = true;
+                            labels[i] = slice.labels[j];
+                        }
+                    }
+                    if(!columnIsPresent) {
+                        labels[i] = labelNotPresent;
+                    }
+                }
+                for(int i = 0; i < labels.length; i++) {
+                    if(labels[i].startsWith("'")) {
+                        query.append(labels[i]);
+                    } else {
+                        query.append("'").append(labels[i]).append("'");
+                    }
+                    if(i < labels.length - 1) {
+                        query.append(", ");
+                    }
+                }
+                query.append(", ").append(interval.pos1);
+                query.append(", ").append(interval.pos2);
+                query.append(", ").append(interval.getRelativeWidth());
+                query.append(", ").append(interval.getRelativeValueRange());
+                if(k < intervals.size() - 1) {
+                    query.append("),(");
+                }
+            }
+            query.append(");");
+            connection.createStatement().executeUpdate(query.toString());
+        } catch (SQLException ex) {
+            handleSQLException(ex);
+        }
+    }
+
+    /**
+     * Получает из таблицы интервалов с отсутствием изменений список интервалов, сгруппированных по определенным столбцам и
+     * отвечающих определенным требованиям.
+     *
+     * @param tableName - название таблицы
+     * @param colNames - названия столбцов таблицы
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - максимальная разность между максимальной и минимальной величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля разности между максимальным и минимальным значением
+     *                        на всем разрезе, от 0 до 1)
+     * @return список интервалов
+     */
+    public List<SuspiciousInterval> getConstants(String tableName, String[] colNames, double minIntervalMult, double thresholdMult) {
+        try {
+            String tableDecName = tableName + "_constants";
+            StringBuilder query = new StringBuilder("SELECT * FROM ").append(tableDecName).append(" WHERE ");
+            List<String> categoryNames = getCategoryNames(tableDecName);
+            for(int i = 0; i < categoryNames.size(); i++) {
+                boolean categoryIsPresent = false;
+                for(String secondCategory: colNames) {
+                    if(categoryNames.get(i).equals(secondCategory)) {
+                        categoryIsPresent = true;
+                    }
+                }
+                if(categoryIsPresent) {
+                    query.append(categoryNames.get(i)).append(" != ").append("'").append(labelNotPresent).append("'");
+                } else {
+                    query.append(categoryNames.get(i)).append(" = ").append("'").append(labelNotPresent).append("'");
+                }
+                if(i < categoryNames.size() - 1) {
+                    query.append(" AND ");
+                }
+            }
+            query.append(" AND relative_width > ").append(minIntervalMult);
+            query.append(" AND relative_value_range < ").append(thresholdMult);
+            query.append(";");
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
+            res.last();
+            List<SuspiciousInterval> intervals = new ArrayList<>();
+            res.beforeFirst();
+            List<Slice> slices = new ArrayList<>();
+            while(res.next()) {
+                String[] labels = new String[colNames.length];
+                for(int i = 0; i < colNames.length; i++) {
+                    labels[i] = "'" + res.getString(colNames[i]) + "'";
+                }
+                Slice slice = null;
+                for(Slice oldSlice: slices) {
+                    boolean sliceIsTheSame = true;
+                    for(int i = 0; i < labels.length; i++) {
+                        if(!oldSlice.labels[i].equals(labels[i])) {
+                            sliceIsTheSame = false;
+                        }
+                    }
+                    if(sliceIsTheSame) {
+                        slice = oldSlice;
+                    }
+                }
+                if(slice == null) {
+                    slice = getSlice(tableName, colNames, labels).getAccumulation();
+                    slices.add(slice);
+                }
+                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2")));
+            }
+            return intervals;
+        } catch (SQLException ex) {
+            handleSQLException(ex);
+        }
+        return new ArrayList<>();
+    }
+
     /**
      * Закрывает соединение с базой данных.
      */
