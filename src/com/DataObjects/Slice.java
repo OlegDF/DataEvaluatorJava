@@ -79,6 +79,39 @@ public class Slice {
     }
 
     /**
+     * Проверяет, верно ли, что между двумя точками значение разреза колеблется не менее чем на определенную величину
+     *
+     * @param pos1 - номер первой точки
+     * @param pos2 - номер второй точки
+     * @param threshold - максимальное изменение значения
+     * @return true, если изменение достаточно мало, иначе false
+     */
+    public boolean isIntervalConstant(int pos1, int pos2, long threshold) {
+        return getLocalValueRange(pos1, pos2) < threshold;
+    }
+
+    /**
+     * Получает разность между максимальным и минимальным значениями на фрагменте разреза.
+     *
+     * @param pos1 - номер первой точки
+     * @param pos2 - номер второй точки
+     * @return значение разности
+     */
+    public long getLocalValueRange(int pos1, int pos2) {
+        long min = points[pos1].value * points[pos1].amount;
+        long max = points[pos1].value * points[pos1].amount;
+        for(int i = pos1; i <= pos2; i++) {
+            if(points[i].value * points[i].amount < min) {
+                min = points[i].value * points[i].amount;
+            }
+            if(points[i].value > max) {
+                max = points[i].value * points[i].amount;
+            }
+        }
+        return Math.abs(max - min);
+    }
+
+    /**
      * Получает расстояние во времени между двумя точками разреза.
      *
      * @param pos1 - номер первой точки
@@ -103,7 +136,7 @@ public class Slice {
     }
 
     /**
-     * Получает разность между максимальным и минимальным значениями на отрезке.
+     * Получает разность между максимальным и минимальным значениями на разрезе.
      *
      * @return значение разности
      */
@@ -114,10 +147,10 @@ public class Slice {
         long min = points[0].value * points[0].amount;
         long max = points[0].value * points[0].amount;
         for(SlicePoint point: points) {
-            if(point.value < min) {
+            if(point.value * point.amount < min) {
                 min = point.value * point.amount;
             }
-            if(point.value > max) {
+            if(point.value * point.amount > max) {
                 max = point.value * point.amount;
             }
         }

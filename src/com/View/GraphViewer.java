@@ -28,6 +28,7 @@ public class GraphViewer {
     private final JPanel graphPanel;
     private final JPanel leftRightButtonsPanel;
 
+    private final JComboBox<String> graphTypeBox;
     private final JComboBox<String>[] categoriesBoxes;
     private final JSlider minIntervalMultSlider;
     private final JSlider thresholdMultSlider;
@@ -74,6 +75,7 @@ public class GraphViewer {
 
         graphsUnavailableText = new JLabel();
 
+        graphTypeBox = new JComboBox();
         categoriesBoxes = new JComboBox[2];
         for(int i = 0; i < categoriesBoxes.length; i++) {
             categoriesBoxes[i] = new JComboBox<>();
@@ -101,6 +103,21 @@ public class GraphViewer {
      * @param constraints - параметры расположения элементов в окне
      */
     private void initializeCategoriesBoxes(GridBagConstraints constraints) {
+        graphTypeBox.addItem("уменьшение");
+        graphTypeBox.addItem("отсутствие роста");
+        setSize(graphTypeBox, 150, 30);
+        graphTypeBox.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel graphTypeLabel = new JLabel();
+        graphTypeLabel.setText("Тип графиков: ");
+        setSize(graphTypeLabel, 100, 30);
+
+        JPanel graphTypePanel = new JPanel();
+        setSize(graphTypePanel, 370, 30);
+        graphTypePanel.add(graphTypeLabel, constraints);
+        graphTypePanel.add(graphTypeBox, constraints);
+
+        buttonsPanel.add(graphTypePanel, constraints);
         for(int i = 0; i < categoriesBoxes.length; i++) {
             fillCategoriesBox(categoriesBoxes[i]);
             setSize(categoriesBoxes[i], 150, 30);
@@ -132,7 +149,7 @@ public class GraphViewer {
         minIntervalMultSlider.addChangeListener(e -> minIntervalMultNumber.setText((double)minIntervalMultSlider.getValue() / sliderWidth + ""));
 
         JLabel minIntervalMultLabel = new JLabel();
-        minIntervalMultLabel.setText("Минимальная ширина: ");
+        minIntervalMultLabel.setText("Ограничение на ширину: ");
         setSize(minIntervalMultLabel, 200, 30);
 
         minIntervalMultNumber.setText((double)minIntervalMultSlider.getValue() / sliderWidth + "");
@@ -151,7 +168,7 @@ public class GraphViewer {
         thresholdMultSlider.addChangeListener(e -> thresholdMultNumber.setText((double)thresholdMultSlider.getValue() / sliderWidth + ""));
 
         JLabel thresholdMultLabel = new JLabel();
-        thresholdMultLabel.setText("Минимальная разность величин: ");
+        thresholdMultLabel.setText("Ограничение на разность величин: ");
         setSize(thresholdMultLabel, 200, 30);
 
         thresholdMultNumber.setText((double)thresholdMultSlider.getValue() / sliderWidth + "");
@@ -263,9 +280,18 @@ public class GraphViewer {
         }
         String[] colNames = categories.toArray(new String[0]);
         if(categories.size() > 0) {
-            decreaseIntervals = dbService.getDecreases(tableName, colNames,
-                    (double)minIntervalMultSlider.getValue() / sliderWidth,
-                    (double)thresholdMultSlider.getValue() / sliderWidth);
+            switch(graphTypeBox.getSelectedIndex()) {
+                case 0:
+                    decreaseIntervals = dbService.getDecreases(tableName, colNames,
+                            (double)minIntervalMultSlider.getValue() / sliderWidth,
+                            (double)thresholdMultSlider.getValue() / sliderWidth);
+                    break;
+                case 1:
+                    decreaseIntervals = dbService.getConstants(tableName, colNames,
+                            (double)minIntervalMultSlider.getValue() / sliderWidth,
+                            (double)thresholdMultSlider.getValue() / sliderWidth);
+                    break;
+            }
             intervalFinder.removeIntersectingIntervals(decreaseIntervals);
             currentGraphs = new ArrayList<>();
         } else {

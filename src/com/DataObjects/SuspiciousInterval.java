@@ -24,9 +24,7 @@ public class SuspiciousInterval {
         if(pos1 < 0 || pos1 >= slice.points.length || pos2 < 0 || pos2 >= slice.points.length) {
             return -1;
         }
-        return (double)(slice.points[pos2].value - slice.points[pos1].value) *
-                (slice.points[pos2].value - slice.points[pos1].value) /
-                (slice.valueRange * slice.valueRange) / Math.sqrt((double)(pos2 - pos1) / slice.points.length);
+        return getRelativeDiff() * getRelativeDiff() / Math.sqrt(getRelativeWidth());
     }
 
     /**
@@ -59,6 +57,16 @@ public class SuspiciousInterval {
      */
     public double getRelativeDiff() {
         return (double)(slice.points[pos2].value - slice.points[pos1].value) / (slice.valueRange);
+    }
+
+    /**
+     * Вычисляет отношение между разностью максимального и минимального значения на интервале и разностью максимума и минимума
+     * на всем отрезке.
+     *
+     * @return отношение разностей значений (ожидаемые значения - между -1 и 1)
+     */
+    public double getRelativeValueRange() {
+        return (double)(slice.getLocalValueRange(pos1, pos2)) / (slice.valueRange);
     }
 
 }

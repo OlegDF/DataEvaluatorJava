@@ -190,6 +190,76 @@ public class DataController {
     }
 
     /**
+     * Создает таблицу, в которую будут записываться интервалы с отсутствием изменения значений для определенной таблицы.
+     *
+     * @param tableName - название таблицы, из будет которой необходимо получать данные
+     */
+    public void createConstantsTable(String tableName) {
+        List<String> categoryNames = dbService.getCategoryNames(tableName);
+        final String[] colNames = new String[categoryNames.size() + 4];
+        final String[] colTypes = new String[categoryNames.size() + 4];
+        for(int i = 0; i < categoryNames.size(); i++) {
+            colNames[i] = categoryNames.get(i);
+            colTypes[i] = "varchar(255)";
+        }
+        colNames[colNames.length - 4] = "pos1";
+        colTypes[colNames.length - 4] = "int8";
+        colNames[colNames.length - 3] = "pos2";
+        colTypes[colNames.length - 3] = "int8";
+        colNames[colNames.length - 2] = "relative_width";
+        colTypes[colNames.length - 2] = "float";
+        colNames[colNames.length - 1] = "relative_value_range";
+        colTypes[colNames.length - 1] = "float";
+        dbService.createTable(tableName + "_constants", colNames, colTypes);
+    }
+
+    /**
+     * Получает разрезы данных, сгруппированных по всем значениям одной категории, делает накопление для каждого разреза,
+     * получает список интервалов, на которых значение не изменяется значительно, сортирует его по длине и записывает интервал
+     * в базу данных.
+     *
+     * @param tableName - название таблицы, из которой необходимо получать данные
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - максимальная разность между максимальной и минимальной величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля разности между максимальным и минимальным значением
+     *                        на всем разрезе, от 0 до 1)
+     * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
+     */
+    public void exportSingleCategoryConstantsToDB(String tableName, double minIntervalMult, double thresholdMult, int maxIntervals) {
+        String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
+        List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName);
+        for(List<Slice> slicesList: slices) {
+            List<SuspiciousInterval> intervals = intervalFinder.getConstantIntervals(slicesList, minIntervalMult, thresholdMult,
+                    maxIntervals, false);
+            dbService.insertConstant(tableName + "_constants", colNames, intervals);
+        }
+    }
+
+    /**
+     * Получает разрезы данных, сгруппированных по всем сочетаниям двух категорий, делает накопление для каждого разреза,
+     * получает список интервалов, на которых значение не изменяется значительно, сортирует его по длине и записывает интервал
+     * в базу данных.
+     *
+     * @param tableName - название таблицы, из которой необходимо получать данные
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - максимальная разность между максимальной и минимальной величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля разности между максимальным и минимальным значением
+     *                        на всем разрезе, от 0 до 1)
+     * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
+     */
+    public void exportDoubleCombinationsConstantsToDB(String tableName, double minIntervalMult, double thresholdMult, int maxIntervals) {
+        String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
+        List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName);
+        for(List<Slice> slicesList: slices) {
+            List<SuspiciousInterval> intervals = intervalFinder.getConstantIntervals(slicesList, minIntervalMult, thresholdMult,
+                    maxIntervals, false);
+            dbService.insertConstant(tableName + "_constants", colNames, intervals);
+        }
+    }
+
+    /**
      * Метод, завершающий работу компонентов.
      */
     public void close() {
