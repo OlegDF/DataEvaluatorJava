@@ -123,11 +123,9 @@ public class SliceRetriever {
     public List<List<Slice>> getDoubleCombinationsSlicesAccumulated(String tableName) {
         List<String> categoryNames = databaseService.getCategoryNames(tableName);
         List<List<Slice>> res = new ArrayList<>();
-        for(String categoryName: categoryNames) {
-            for(String categoryName2: categoryNames) {
-                if(!categoryName.equals(categoryName2)) {
-                    res.add(getTwoCategorySlicesAccumulated(tableName, categoryName, categoryName2));
-                }
+        for(int i = 0; i < categoryNames.size() - 1; i++) {
+            for(int j = i + 1; j < categoryNames.size(); j++) {
+                res.add(getTwoCategorySlicesAccumulated(tableName, categoryNames.get(i), categoryNames.get(j)));
             }
         }
         return res;
