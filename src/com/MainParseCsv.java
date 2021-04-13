@@ -8,7 +8,7 @@ public class MainParseCsv {
 
         DataController dataController = new DataController();
 
-        dataController.parseCsv("data_v06");
+        dataController.parseCsv();
 
         dataController.close();
 

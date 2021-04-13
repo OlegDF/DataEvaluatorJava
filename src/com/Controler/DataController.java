@@ -16,6 +16,7 @@ import java.util.List;
  */
 public class DataController {
 
+    private Config config;
     private DataRetriever dataRetriever;
     private SliceRetriever sliceRetriever;
     private GraphExporter graphExporter;
@@ -23,25 +24,27 @@ public class DataController {
 
     private DatabaseService dbService;
 
+    private String tableName;
+
     public DataController() {
-        dbService = new DatabaseService("evaluatordb", "evaluator", "comparison419");
+        config = new Config();
+        tableName = config.getTableName();
+        dbService = new DatabaseService(config.getDbName(), config.getUserName(), config.getPassword());
         dataRetriever = new DataRetriever(dbService);
         sliceRetriever = new SliceRetriever(dbService);
         graphExporter = new GraphExporter();
         intervalFinder = new SimpleIntervalFinder();
     }
 
-    public void parseCsv(String fileName) {
-        dataRetriever.csvToDatabase(fileName);
+    public void parseCsv() {
+        dataRetriever.csvToDatabase(tableName);
     }
-
 
     /**
      * Получает разрезы данных, сгруппированных по всем значениям одной категорий, делает накопление для каждого разреза,
      * генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
-     * @param tableName - название таблицы, из которой необходимо получать данные
      */
-    public void exportSingleCategoryGraphsAccumulated(String tableName) {
+    public void exportSingleCategoryGraphsAccumulated() {
         List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName);
         for(List<Slice> slicesList: slices) {
             for(Slice slice: slicesList) {
@@ -54,9 +57,8 @@ public class DataController {
     /**
      * Получает разрезы данных, сгруппированных по всем сочетаниям двух категорий, делает накопление для каждого разреза,
      * генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
-     * @param tableName - название таблицы, из которой необходимо получать данные
      */
-    public void exportDoubleCombinationsGraphsAccumulated(String tableName) {
+    public void exportDoubleCombinationsGraphsAccumulated() {
         List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName);
         for(List<Slice> slicesList: slices) {
             for(Slice slice: slicesList) {
@@ -70,7 +72,6 @@ public class DataController {
      * получает список интервалов, на которых значение убывает, сортирует его по величине убывания, генерирует граф из
      * каждого разреза и сохраняет граф в виде изображения .png.
      *
-     * @param tableName - название таблицы, из которой необходимо получать данные
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
      * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
@@ -78,7 +79,7 @@ public class DataController {
      *                        на всем разрезе, от 0 до 1)
      * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
-    public void exportSingleCategoryDecreaseGraphs(String tableName, double minIntervalMult, double thresholdMult, int maxIntervals) {
+    public void exportSingleCategoryDecreaseGraphs(double minIntervalMult, double thresholdMult, int maxIntervals) {
         List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName);
         for(List<Slice> slicesList: slices) {
             List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, minIntervalMult, thresholdMult,
@@ -96,7 +97,6 @@ public class DataController {
      * получает список интервалов, на которых значение убывает, сортирует его по величине убывания, генерирует граф из
      * каждого разреза и сохраняет граф в виде изображения .png.
      *
-     * @param tableName - название таблицы, из которой необходимо получать данные
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
      * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
@@ -104,7 +104,7 @@ public class DataController {
      *                        на всем разрезе, от 0 до 1)
      * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
-    public void exportDoubleCombinationsDecreaseGraphs(String tableName, double minIntervalMult, double thresholdMult, int maxIntervals) {
+    public void exportDoubleCombinationsDecreaseGraphs(double minIntervalMult, double thresholdMult, int maxIntervals) {
         List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName);
         for(List<Slice> slicesList: slices) {
             List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, minIntervalMult, thresholdMult,
@@ -119,10 +119,8 @@ public class DataController {
 
     /**
      * Создает таблицу, в которую будут записываться интервалы с уменьшением значений для определенной таблицы.
-     *
-     * @param tableName - название таблицы, из будет которой необходимо получать данные
      */
-    public void createDecreasesTable(String tableName) {
+    public void createDecreasesTable() {
         List<String> categoryNames = dbService.getCategoryNames(tableName);
         final String[] colNames = new String[categoryNames.size() + 5];
         final String[] colTypes = new String[categoryNames.size() + 5];
@@ -148,7 +146,6 @@ public class DataController {
      * получает список интервалов, на которых значение убывает, сортирует его по величине убывания и записывает интервал
      * в базу данных.
      *
-     * @param tableName - название таблицы, из которой необходимо получать данные
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
      * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
@@ -156,7 +153,7 @@ public class DataController {
      *                        на всем разрезе, от 0 до 1)
      * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
-    public void exportSingleCategoryDecreasesToDB(String tableName, double minIntervalMult, double thresholdMult, int maxIntervals) {
+    public void exportSingleCategoryDecreasesToDB(double minIntervalMult, double thresholdMult, int maxIntervals) {
         String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
         List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName);
         for(List<Slice> slicesList: slices) {
@@ -171,7 +168,6 @@ public class DataController {
      * получает список интервалов, на которых значение убывает, сортирует его по величине убывания и записывает интервал
      * в базу данных.
      *
-     * @param tableName - название таблицы, из которой необходимо получать данные
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
      * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
@@ -179,7 +175,7 @@ public class DataController {
      *                        на всем разрезе, от 0 до 1)
      * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
-    public void exportDoubleCombinationsDecreasesToDB(String tableName, double minIntervalMult, double thresholdMult, int maxIntervals) {
+    public void exportDoubleCombinationsDecreasesToDB(double minIntervalMult, double thresholdMult, int maxIntervals) {
         String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
         List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName);
         for(List<Slice> slicesList: slices) {
@@ -191,10 +187,8 @@ public class DataController {
 
     /**
      * Создает таблицу, в которую будут записываться интервалы с отсутствием изменения значений для определенной таблицы.
-     *
-     * @param tableName - название таблицы, из будет которой необходимо получать данные
      */
-    public void createConstantsTable(String tableName) {
+    public void createConstantsTable() {
         List<String> categoryNames = dbService.getCategoryNames(tableName);
         final String[] colNames = new String[categoryNames.size() + 4];
         final String[] colTypes = new String[categoryNames.size() + 4];
@@ -218,7 +212,6 @@ public class DataController {
      * получает список интервалов, на которых значение не изменяется значительно, сортирует его по длине и записывает интервал
      * в базу данных.
      *
-     * @param tableName - название таблицы, из которой необходимо получать данные
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
      * @param thresholdMult - максимальная разность между максимальной и минимальной величиной для интервалов, которые будут
@@ -226,7 +219,7 @@ public class DataController {
      *                        на всем разрезе, от 0 до 1)
      * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
-    public void exportSingleCategoryConstantsToDB(String tableName, double minIntervalMult, double thresholdMult, int maxIntervals) {
+    public void exportSingleCategoryConstantsToDB(double minIntervalMult, double thresholdMult, int maxIntervals) {
         String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
         List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName);
         for(List<Slice> slicesList: slices) {
@@ -241,7 +234,6 @@ public class DataController {
      * получает список интервалов, на которых значение не изменяется значительно, сортирует его по длине и записывает интервал
      * в базу данных.
      *
-     * @param tableName - название таблицы, из которой необходимо получать данные
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
      * @param thresholdMult - максимальная разность между максимальной и минимальной величиной для интервалов, которые будут
@@ -249,7 +241,7 @@ public class DataController {
      *                        на всем разрезе, от 0 до 1)
      * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
-    public void exportDoubleCombinationsConstantsToDB(String tableName, double minIntervalMult, double thresholdMult, int maxIntervals) {
+    public void exportDoubleCombinationsConstantsToDB(double minIntervalMult, double thresholdMult, int maxIntervals) {
         String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
         List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName);
         for(List<Slice> slicesList: slices) {

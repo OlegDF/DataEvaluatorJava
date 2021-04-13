@@ -1,0 +1,4 @@
+db_name=evaluatordb
+user_name=evaluator
+password=comparison419
+table_name=data_v06
