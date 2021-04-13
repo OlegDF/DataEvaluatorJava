@@ -7,7 +7,7 @@ public class MainViewGraphs {
 
     public static void main(String[] args) {
 
-        GraphViewer graphViewer = new GraphViewer("data_v06");
+        GraphViewer graphViewer = new GraphViewer();
 
     }
 

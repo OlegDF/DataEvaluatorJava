@@ -1,5 +1,6 @@
 package com.View;
 
+import com.Controler.Config;
 import com.DataObjects.SuspiciousInterval;
 import com.Model.DatabaseService;
 import com.Model.Intervals.IntervalFinder;
@@ -19,6 +20,7 @@ public class GraphViewer {
 
     private final String undefinedCategory = "-";
 
+    private final Config config;
     private final IntervalFinder intervalFinder;
     private final GraphExporter graphExporter;
     private final DatabaseService dbService;
@@ -50,11 +52,11 @@ public class GraphViewer {
 
     /**
      * Создает окно, получающее интервалы из определенной таблицы.
-     *
-     * @param tableName - название таблицы
      */
-    public GraphViewer(String tableName) {
-        dbService = new DatabaseService("evaluatordb", "evaluator", "comparison419");
+    public GraphViewer() {
+        config = new Config();
+        tableName = config.getTableName();
+        dbService = new DatabaseService(config.getDbName(), config.getUserName(), config.getPassword());
         intervalFinder = new SimpleIntervalFinder();
         graphExporter = new GraphExporter();
 
