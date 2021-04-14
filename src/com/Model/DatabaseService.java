@@ -156,32 +156,46 @@ public class DatabaseService {
     }
 
     /**
-     * Получает список уникальных значений, которые принимают данные в указанном столбце.
+     * Получает список уникальных значений, которые принимают данные в указанных столбцах.
      *
      * @param tableName - название таблицы
-     * @param colName - название столбца
+     * @param colNames - названия столбцов
      * @return список значений в строковом виде
      */
-    public String[] getUniqueLabels(String tableName, String colName) {
+    public List<String[]> getLabelCombinations(String tableName, String[] colNames, int maxCount) {
         StringBuilder query = new StringBuilder();
         try {
-            query.append("SELECT DISTINCT ").append(colName).append(" FROM ").append(tableName).append(";");
-            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
-            res.last();
-            int length = res.getRow();
-            String[] labels = new String[length];
-            res.beforeFirst();
-            int i = 0;
-            while(res.next()) {
-                labels[i] = res.getString(colName);
-                i++;
+            query.append("SELECT ");
+            for(int i = 0; i < colNames.length; i++) {
+                query.append(colNames[i]);
+                if(i < colNames.length - 1) {
+                    query.append(", ");
+                }
             }
-            return labels;
+            query.append(" FROM ").append(tableName).append(" GROUP BY ");
+            for(int i = 0; i < colNames.length; i++) {
+                query.append(colNames[i]);
+                if(i < colNames.length - 1) {
+                    query.append(", ");
+                }
+            }
+            query.append(" ORDER BY sum(amount) DESC LIMIT ").append(maxCount).append(";");
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
+            res.beforeFirst();
+            List<String[]> labelCombinations = new ArrayList<>();
+            while(res.next()) {
+                String[] combination = new String[colNames.length];
+                for(int i = 0; i < colNames.length; i++) {
+                    combination[i] = "'" + res.getString(colNames[i]) + "'";
+                }
+                labelCombinations.add(combination);
+            }
+            return labelCombinations;
         } catch (SQLException ex) {
-            logger.logError("Не удалось получить список значений столбца по запросу: " + query);
+            logger.logError("Не удалось получить разрез по запросу: " + query);
             handleSQLException(ex);
         }
-        return new String[0];
+        return new ArrayList<>();
     }
 
     /**

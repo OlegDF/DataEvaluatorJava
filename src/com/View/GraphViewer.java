@@ -156,13 +156,13 @@ public class GraphViewer {
 
         JLabel minIntervalMultLabel = new JLabel();
         minIntervalMultLabel.setText("Ограничение на ширину: ");
-        setSize(minIntervalMultLabel, 200, 30);
+        setSize(minIntervalMultLabel, 250, 30);
 
         minIntervalMultNumber.setText((double)minIntervalMultSlider.getValue() / sliderWidth + "");
         setSize(minIntervalMultNumber, 50, 30);
 
         JPanel minIntervalMultPanel = new JPanel();
-        setSize(minIntervalMultPanel, 500, 30);
+        setSize(minIntervalMultPanel, 550, 30);
         minIntervalMultPanel.add(minIntervalMultLabel, constraints);
         minIntervalMultPanel.add(minIntervalMultSlider, constraints);
         minIntervalMultPanel.add(minIntervalMultNumber, constraints);
@@ -175,13 +175,13 @@ public class GraphViewer {
 
         JLabel thresholdMultLabel = new JLabel();
         thresholdMultLabel.setText("Ограничение на разность величин: ");
-        setSize(thresholdMultLabel, 200, 30);
+        setSize(thresholdMultLabel, 250, 30);
 
         thresholdMultNumber.setText((double)thresholdMultSlider.getValue() / sliderWidth + "");
         setSize(thresholdMultNumber, 50, 30);
 
         JPanel thresholdMultPanel = new JPanel();
-        setSize(thresholdMultPanel, 500, 30);
+        setSize(thresholdMultPanel, 550, 30);
         thresholdMultPanel.add(thresholdMultLabel, constraints);
         thresholdMultPanel.add(thresholdMultSlider, constraints);
         thresholdMultPanel.add(thresholdMultNumber, constraints);
@@ -267,6 +267,7 @@ public class GraphViewer {
     private void setupWindow() {
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         mainFrame.setSize(650, 700);
+        mainFrame.setTitle("Графики интервалов");
         mainFrame.setLayout(new BoxLayout(mainFrame.getContentPane(), BoxLayout.Y_AXIS));
         mainFrame.setVisible(true);
         mainFrame.revalidate();

@@ -43,6 +43,7 @@ public class Config {
         res.putIfAbsent("user_name", "evaluator");
         res.putIfAbsent("password", "comparison419");
         res.putIfAbsent("table_name", "data_v06");
+        res.putIfAbsent("max_slices_per_combo", "16");
         return res;
     }
 
@@ -60,6 +61,14 @@ public class Config {
 
     public String getTableName() {
         return config.get("table_name");
+    }
+
+    public int getMaxSlicesPerCombo() {
+        try {
+            return Integer.parseInt(config.get("max_slices_per_combo"));
+        } catch (NumberFormatException e) {
+            return 16;
+        }
     }
 
 }

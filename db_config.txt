@@ -1,4 +1,5 @@
 db_name=evaluatordb
 user_name=evaluator
 password=comparison419
-table_name=data_v06
+table_name=data_v08
+max_slices_per_combo=16
