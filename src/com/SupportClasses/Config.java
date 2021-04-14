@@ -1,4 +1,4 @@
-package com.Controler;
+package com.SupportClasses;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -6,6 +6,10 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Класс, который получает конфигурацию из текстового файла (параметры, такие как название файла, базы данных, данные для
+ * соединения с БД)
+ */
 public class Config {
 
     private Map<String, String> config;

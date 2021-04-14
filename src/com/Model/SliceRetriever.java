@@ -1,7 +1,8 @@
 package com.Model;
 
 import com.DataObjects.Slice;
-import com.DataObjects.SuspiciousInterval;
+import com.SupportClasses.ConsoleLogger;
+import com.SupportClasses.Logger;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -13,9 +14,11 @@ import java.util.List;
 public class SliceRetriever {
 
     private final DatabaseService databaseService;
+    private final Logger logger;
 
     public SliceRetriever(DatabaseService databaseService) {
         this.databaseService = databaseService;
+        logger = new ConsoleLogger();
     }
 
     /**
@@ -27,6 +30,7 @@ public class SliceRetriever {
      * @return список разрезов
      */
     public List<Slice> getCategorySlices(String tableName, String category) {
+        logger.logMessage("Начинается получение разрезов по категории " + category + "...");
         List<Slice> res = new ArrayList<>();
         String[] categoryLabels = databaseService.getUniqueLabels(tableName, category);
         String[] colNames = {category};
@@ -35,6 +39,7 @@ public class SliceRetriever {
             res.add(databaseService.getSlice(tableName, colNames, labels));
         }
         res.sort(Comparator.comparingLong(o -> -o.totalAmount));
+        logger.logMessage("Закончилось получение разрезов по категории " + category + ", получено " + res.size() + " разрезов.");
         return res.size() >= 10 ? res.subList(0, 10) : res;
     }
 
@@ -48,6 +53,7 @@ public class SliceRetriever {
      * @return список разрезов
      */
     public List<Slice> getTwoCategorySlices(String tableName, String category1, String category2) {
+        logger.logMessage("Начинается получение разрезов по категориям " + category1 + " и " + category2 + "...");
         List<Slice> res = new ArrayList<>();
         String[] category1Labels = databaseService.getUniqueLabels(tableName, category1);
         String[] category2Labels = databaseService.getUniqueLabels(tableName, category2);
@@ -59,6 +65,7 @@ public class SliceRetriever {
             }
         }
         res.sort(Comparator.comparingLong(o -> -o.totalAmount));
+        logger.logMessage("Закончилось получение разрезов по категориям " + category1 + " и " + category2 + ", получено " + res.size() + " разрезов.");
         return res.size() >= 10 ? res.subList(0, 10) : res;
     }
 
