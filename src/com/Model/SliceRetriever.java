@@ -1,5 +1,6 @@
 package com.Model;
 
+import com.DataObjects.Approximations.ApproximationType;
 import com.DataObjects.Slice;
 import com.SupportClasses.ConsoleLogger;
 import com.SupportClasses.Logger;
@@ -16,9 +17,11 @@ public class SliceRetriever {
 
     private final DatabaseService databaseService;
     private final Logger logger;
+    private final ApproximationType approximationType;
 
-    public SliceRetriever(DatabaseService databaseService) {
+    public SliceRetriever(DatabaseService databaseService, ApproximationType approximationType) {
         this.databaseService = databaseService;
+        this.approximationType = approximationType;
         logger = new ConsoleLogger();
     }
 
@@ -36,7 +39,7 @@ public class SliceRetriever {
         List<Slice> res = new ArrayList<>();
         List<String[]> labelCombinations = databaseService.getLabelCombinations(tableName, categories, maxSlices);
         for(String[] combination: labelCombinations) {
-            res.add(databaseService.getSlice(tableName, categories, combination));
+            res.add(databaseService.getSlice(tableName, categories, combination, approximationType));
         }
         res.sort(Comparator.comparingLong(o -> -o.totalAmount));
         logger.logMessage("Закончилось получение разрезов по категории " + Arrays.toString(categories) + ", получено " + res.size() + " разрезов.");

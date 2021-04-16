@@ -1,5 +1,6 @@
 package com.View;
 
+import com.DataObjects.Approximations.ApproximationType;
 import com.SupportClasses.Config;
 import com.DataObjects.SuspiciousInterval;
 import com.Model.DatabaseService;
@@ -13,6 +14,7 @@ import org.jfree.chart.swing.ChartPanel;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -49,6 +51,7 @@ public class GraphViewer {
     private final JLabel currentGraphNumber;
 
     private String tableName;
+    private ApproximationType approximationType;
     private List<SuspiciousInterval> decreaseIntervals;
     private List<JFreeChart> currentGraphs;
     private int currentInterval;
@@ -60,6 +63,7 @@ public class GraphViewer {
         config = new Config();
         logger = new ConsoleLogger();
         tableName = config.getTableName();
+        approximationType = config.getApproximationType();
         dbService = new DatabaseService(config.getDbName(), config.getUserName(), config.getPassword());
         intervalFinder = new SimpleIntervalFinder();
         graphExporter = new GraphExporter();
@@ -290,14 +294,14 @@ public class GraphViewer {
             switch(graphTypeBox.getSelectedIndex()) {
                 case 0:
                     logger.logMessage("Начинается получение графиков уменьшения...");
-                    decreaseIntervals = dbService.getDecreases(tableName, colNames,
+                    decreaseIntervals = dbService.getDecreases(tableName, colNames, approximationType,
                             (double)minIntervalMultSlider.getValue() / sliderWidth,
                             (double)thresholdMultSlider.getValue() / sliderWidth);
                     logger.logMessage("Закончено получение графиков уменьшения.");
                     break;
                 case 1:
                     logger.logMessage("Начинается получение графиков отсутствия роста...");
-                    decreaseIntervals = dbService.getConstants(tableName, colNames,
+                    decreaseIntervals = dbService.getConstants(tableName, colNames, approximationType,
                             (double)minIntervalMultSlider.getValue() / sliderWidth,
                             (double)thresholdMultSlider.getValue() / sliderWidth);
                     logger.logMessage("Закончено получение графиков отсутствия роста.");

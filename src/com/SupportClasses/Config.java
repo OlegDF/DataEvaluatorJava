@@ -1,5 +1,7 @@
 package com.SupportClasses;
 
+import com.DataObjects.Approximations.ApproximationType;
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -30,9 +32,11 @@ public class Config {
 
             String line = lineReader.readLine();
             while(line != null) {
-                String[] lineSplit = line.split("=");
-                if(lineSplit.length == 2) {
-                    res.put(lineSplit[0], lineSplit[1]);
+                if(!line.startsWith("//")) {
+                    String[] lineSplit = line.split("=");
+                    if(lineSplit.length == 2) {
+                        res.put(lineSplit[0], lineSplit[1]);
+                    }
                 }
                 line = lineReader.readLine();
             }
@@ -44,6 +48,7 @@ public class Config {
         res.putIfAbsent("password", "comparison419");
         res.putIfAbsent("table_name", "data_v06");
         res.putIfAbsent("max_slices_per_combo", "16");
+        res.putIfAbsent("approximation_type", "linear");
         return res;
     }
 
@@ -68,6 +73,19 @@ public class Config {
             return Integer.parseInt(config.get("max_slices_per_combo"));
         } catch (NumberFormatException e) {
             return 16;
+        }
+    }
+    public ApproximationType getApproximationType() {
+        String approximationTypeStr = config.get("approximation_type");
+        switch(approximationTypeStr) {
+            case "empty":
+                return ApproximationType.EMPTY;
+            case "linear":
+                return ApproximationType.LINEAR;
+            case "averages":
+                return ApproximationType.AVERAGES;
+            default:
+                return ApproximationType.EMPTY;
         }
     }
 

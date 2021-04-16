@@ -95,6 +95,7 @@ public class SimpleIntervalFinder implements IntervalFinder {
      *
      * @param intervals - список интервалов
      */
+    @Override
     public void removeIntersectingIntervals(List<SuspiciousInterval> intervals) {
         for(int i = 0; i < intervals.size() - 1; i++) {
             for(int j = i + 1; j < intervals.size(); j++) {

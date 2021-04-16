@@ -1,4 +1,5 @@
 package com.Model;
+import com.DataObjects.Approximations.ApproximationType;
 import com.DataObjects.Slice;
 import com.DataObjects.SlicePoint;
 import com.DataObjects.SuspiciousInterval;
@@ -17,7 +18,7 @@ import java.util.List;
  */
 public class DatabaseService {
 
-    public final String labelNotPresent = "NOT_APPLICABLE";
+    private final String labelNotPresent = "NOT_APPLICABLE";
 
     private Connection connection = null;
 
@@ -39,9 +40,9 @@ public class DatabaseService {
         final String url = "jdbc:postgresql://localhost/" + db + "?user=" + user + "&password=" + password;
         try {
             connection = DriverManager.getConnection(url);
-            logger.logMessage("Установлено подключение к базе данных по ссылке: " + url);
+            logger.logMessage("Установлено подключение к базе данных " + db);
         } catch (SQLException ex) {
-            logger.logError("Не удалось подключиться к базе данных по ссылке: " + url);
+            logger.logError("Не удалось подключиться к базе данных " + db);
             handleSQLException(ex);
         }
     }
@@ -123,9 +124,10 @@ public class DatabaseService {
      * @param tableName - название таблицы
      * @param colNames - названия столбцов, по которым отбираются данные
      * @param labels - значения в соответствующих столбцах в строковом виде
+     * @param approximationType - тип функции приближения
      * @return объект-разрез
      */
-    public Slice getSlice(String tableName, String[] colNames, String[] labels) {
+    public Slice getSlice(String tableName, String[] colNames, String[] labels, ApproximationType approximationType) {
         StringBuilder query = new StringBuilder();
         try {
             query.append("SELECT * FROM ").append(tableName).append(" WHERE ");
@@ -147,7 +149,7 @@ public class DatabaseService {
                 points[i] = new SlicePoint(res.getLong("value_1"), res.getLong("amount"), res.getTimestamp("first_date"));
                 i++;
             }
-            return new Slice(tableName, colNames, labels, points);
+            return new Slice(tableName, colNames, labels, points, approximationType);
         } catch (SQLException ex) {
             logger.logError("Не удалось получить разрез по запросу: " + query);
             handleSQLException(ex);
@@ -294,6 +296,7 @@ public class DatabaseService {
      *
      * @param tableName - название таблицы
      * @param colNames - названия столбцов таблицы
+     * @param approximationType - тип приближения срезов
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
      * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
@@ -301,7 +304,8 @@ public class DatabaseService {
      *                        на всем разрезе, от 0 до 1)
      * @return список интервалов
      */
-    public List<SuspiciousInterval> getDecreases(String tableName, String[] colNames, double minIntervalMult, double thresholdMult) {
+    public List<SuspiciousInterval> getDecreases(String tableName, String[] colNames, ApproximationType approximationType,
+                                                 double minIntervalMult, double thresholdMult) {
         StringBuilder query = new StringBuilder();
         try {
             String tableDecName = tableName + "_decreases";
@@ -349,7 +353,7 @@ public class DatabaseService {
                     }
                 }
                 if(slice == null) {
-                    slice = getSlice(tableName, colNames, labels).getAccumulation();
+                    slice = getSlice(tableName, colNames, labels, approximationType).getAccumulation();
                     slices.add(slice);
                 }
                 intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2")));
@@ -431,6 +435,7 @@ public class DatabaseService {
      *
      * @param tableName - название таблицы
      * @param colNames - названия столбцов таблицы
+     * @param approximationType - тип приближения срезов
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
      * @param thresholdMult - максимальная разность между максимальной и минимальной величиной для интервалов, которые будут
@@ -438,7 +443,8 @@ public class DatabaseService {
      *                        на всем разрезе, от 0 до 1)
      * @return список интервалов
      */
-    public List<SuspiciousInterval> getConstants(String tableName, String[] colNames, double minIntervalMult, double thresholdMult) {
+    public List<SuspiciousInterval> getConstants(String tableName, String[] colNames, ApproximationType approximationType,
+                                                 double minIntervalMult, double thresholdMult) {
         StringBuilder query = new StringBuilder();
         try {
             String tableDecName = tableName + "_constants";
@@ -486,7 +492,7 @@ public class DatabaseService {
                     }
                 }
                 if(slice == null) {
-                    slice = getSlice(tableName, colNames, labels).getAccumulation();
+                    slice = getSlice(tableName, colNames, labels, approximationType).getAccumulation();
                     slices.add(slice);
                 }
                 intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2")));

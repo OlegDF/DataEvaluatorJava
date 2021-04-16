@@ -38,7 +38,7 @@ public class DataController {
         maxSlicesPerCombo = config.getMaxSlicesPerCombo();
         dbService = new DatabaseService(config.getDbName(), config.getUserName(), config.getPassword());
         dataRetriever = new DataRetriever(dbService);
-        sliceRetriever = new SliceRetriever(dbService);
+        sliceRetriever = new SliceRetriever(dbService, config.getApproximationType());
         graphExporter = new GraphExporter();
         intervalFinder = new SimpleIntervalFinder();
     }
