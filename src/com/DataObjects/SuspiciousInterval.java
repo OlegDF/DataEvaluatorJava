@@ -26,7 +26,7 @@ public class SuspiciousInterval {
         }
         double relativeSigma = slice.getSigma() / slice.valueRange;
         if(relativeSigma != 0) {
-            return getRelativeDiff() * getRelativeDiff() / (getRelativeWidth()) / (slice.getSigma() / slice.valueRange);
+            return getRelativeDiff() * getRelativeDiff() / (getRelativeWidth()) / relativeSigma;
         } else {
             return getRelativeDiff() * getRelativeDiff() / (getRelativeWidth());
         }
@@ -39,10 +39,10 @@ public class SuspiciousInterval {
      * @return true, если интервалы пересекаются, и false, если они не пересекаются или если они взяты из разных разрезов
      */
     public boolean intersects(SuspiciousInterval secondInterval) {
-        return slice == secondInterval.slice &&
+        return slice.equals(secondInterval.slice) &&
                 ((pos1 > secondInterval.pos1 && pos1 < secondInterval.pos2) || (pos2 > secondInterval.pos1 && pos2 < secondInterval.pos2) ||
                         (secondInterval.pos1 > pos1 && secondInterval.pos1 < pos2) || (secondInterval.pos2 > pos1 && secondInterval.pos2 < pos2) ||
-                        (secondInterval.pos1 == pos1 && secondInterval.pos1 == pos2));
+                        (secondInterval.pos1 == pos1 && secondInterval.pos2 == pos2));
     }
 
     /**

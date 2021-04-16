@@ -65,41 +65,65 @@ public class SliceRetriever {
     }
 
     /**
-     * Получает разрезы данных, сгруппированных по всем значениям одной категории, делает накопление для каждого разреза,
-     * генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
-     * @param maxSlices - максимальное количество разрезов с одной комбинацией ярлыков, возвращаемое методом
+     * Получает разрезы данных, сгруппированных по всем сочетаниям одной или более категорий, делает накопление для
+     * каждого разреза, генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
      *
+     * @param maxSlices - максимальное количество разрезов с одной комбинацией ярлыков, возвращаемое методом
+     * @param maxCategories - максимальное количество категорий, по которым группируется каждый разрез.
      * @param tableName - название таблицы, из которой необходимо получать данные
      * @return список разрезов с накоплением
      */
-    public List<List<Slice>> getSingleCategorySlicesAccumulated(String tableName, int maxSlices) {
+    public List<Slice> getSlicesAccumulated(String tableName, int maxCategories, int maxSlices) {
         List<String> categoryNames = databaseService.getCategoryNames(tableName);
-        List<List<Slice>> res = new ArrayList<>();
-        for(String categoryName: categoryNames) {
-            String[] categories = {categoryName};
-            res.add(getCategorySlicesAccumulated(tableName, categories, maxSlices));
+        List<Slice> res = new ArrayList<>();
+        List<String[]> categoryCombos = getInitialCategories(categoryNames);
+        for(int i = 0; i < maxCategories; i++) {
+            for(String[] categories: categoryCombos) {
+                res.addAll(getCategorySlicesAccumulated(tableName, categories, maxSlices));
+            }
+            categoryCombos = addCategory(categoryCombos, categoryNames);
         }
         return res;
     }
 
     /**
-     * Получает разрезы данных, сгруппированных по всем сочетаниям двух категорий, делает накопление для каждого разреза,
-     * генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
-     * @param maxSlices - максимальное количество разрезов с одной комбинацией ярлыков, возвращаемое методом
+     * Получает список массивов, каждый из которых содержит название одной из категорий.
      *
-     * @param tableName - название таблицы, из которой необходимо получать данные
-     * @return список разрезов с накоплением
+     * @param categoryNames - список категорий
+     * @return список массивов, по 1 на категорию
      */
-    public List<List<Slice>> getDoubleCombinationsSlicesAccumulated(String tableName, int maxSlices) {
-        List<String> categoryNames = databaseService.getCategoryNames(tableName);
-        List<List<Slice>> res = new ArrayList<>();
-        for(int i = 0; i < categoryNames.size() - 1; i++) {
-            for(int j = i + 1; j < categoryNames.size(); j++) {
-                String[] categories = {categoryNames.get(i), categoryNames.get(j)};
-                res.add(getCategorySlicesAccumulated(tableName, categories, maxSlices));
+    private List<String[]> getInitialCategories(List<String> categoryNames) {
+        List<String[]> newCombos = new ArrayList<>();
+        for(String categoryName: categoryNames) {
+            String[] newCombo = {categoryName};
+            newCombos.add(newCombo);
+        }
+        return newCombos;
+    }
+
+    /**
+     * Добавляет в каждый из полученных списков категорий 1 новую категорию (категории внутри списка сортируются в
+     * алфавитном порядке, чтобы избежать повторений); получает список всех комбинаций старых категорий с новой,
+     * удовлетворяющих этому условию.
+     *
+     * @param currentCombos - имеющиеся сочетания категорий
+     * @param categoryNames - список категорий
+     * @return сочетания категорий, в каждом из которых на 1 категорию больше, чем во входных сочетаниях
+     */
+    private List<String[]> addCategory(List<String[]> currentCombos, List<String> categoryNames) {
+        List<String[]> newCombos = new ArrayList<>();
+        for(String[] combo: currentCombos) {
+            for(String categoryName: categoryNames) {
+                if(categoryName.compareTo(combo[combo.length - 1]) <= 0) {
+                    continue;
+                }
+                String[] newCombo = new String[combo.length + 1];
+                System.arraycopy(combo, 0, newCombo, 0, combo.length);
+                newCombo[newCombo.length - 1] = categoryName;
+                newCombos.add(newCombo);
             }
         }
-        return res;
+        return newCombos;
     }
 
 }

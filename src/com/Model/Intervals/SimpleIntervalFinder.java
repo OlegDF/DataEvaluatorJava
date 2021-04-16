@@ -36,12 +36,21 @@ public class SimpleIntervalFinder implements IntervalFinder {
         for(Slice slice: slices) {
             final int chunkLength = Integer.max(slice.points.length / 128, 1);
             final int minIntervalLength = Integer.max((int)Math.floor(slice.dateRange * minIntervalMult), 1);
-            final long threshold = (long)Math.floor(slice.valueRange * thresholdMult);
+            final long threshold = (long)Math.floor(slice.getSigma() * thresholdMult);
             for(int pos1 = 0; pos1 < slice.points.length - 1; pos1 += chunkLength) {
+                SuspiciousInterval newInterval = null;
                 for(int pos2 = pos1 + chunkLength; pos2 < slice.points.length; pos2 += chunkLength) {
                     if(slice.isIntervalDecreasing(pos1, pos2, threshold) && slice.getDateDistance(pos1, pos2) >= minIntervalLength) {
-                        res.add(new SuspiciousInterval(slice, pos1, pos2));
+                        SuspiciousInterval secondInterval = new SuspiciousInterval(slice, pos1, pos2);
+                        if(newInterval == null) {
+                            newInterval = secondInterval;
+                        } else if(secondInterval.getDecreaseScore() > newInterval.getDecreaseScore()) {
+                            newInterval = secondInterval;
+                        }
                     }
+                }
+                if(newInterval != null) {
+                    res.add(newInterval);
                 }
             }
         }
@@ -73,12 +82,16 @@ public class SimpleIntervalFinder implements IntervalFinder {
         for(Slice slice: slices) {
             final int chunkLength = Integer.max(slice.points.length / 128, 1);
             final int minIntervalLength = Integer.max((int)Math.floor(slice.dateRange * minIntervalMult), 1);
-            final long threshold = (long)Math.floor(slice.valueRange * thresholdMult);
+            final long threshold = (long)Math.floor(slice.getSigma() * thresholdMult);
             for(int pos1 = 0; pos1 < slice.points.length - 1; pos1 += chunkLength) {
+                SuspiciousInterval newInterval = null;
                 for(int pos2 = pos1 + chunkLength; pos2 < slice.points.length; pos2 += chunkLength) {
                     if(slice.isIntervalConstant(pos1, pos2, threshold) && slice.getDateDistance(pos1, pos2) >= minIntervalLength) {
-                        res.add(new SuspiciousInterval(slice, pos1, pos2));
+                        newInterval = new SuspiciousInterval(slice, pos1, pos2);
                     }
+                }
+                if(newInterval != null) {
+                    res.add(newInterval);
                 }
             }
         }
@@ -98,10 +111,9 @@ public class SimpleIntervalFinder implements IntervalFinder {
     @Override
     public void removeIntersectingIntervals(List<SuspiciousInterval> intervals) {
         for(int i = 0; i < intervals.size() - 1; i++) {
-            for(int j = i + 1; j < intervals.size(); j++) {
+            for(int j = intervals.size() - 1; j > i; j--) {
                 if(intervals.get(i).intersects(intervals.get(j))) {
                     intervals.remove(j);
-                    j--;
                 }
             }
         }
