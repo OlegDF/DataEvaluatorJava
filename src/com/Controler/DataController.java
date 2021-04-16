@@ -7,6 +7,9 @@ import com.DataObjects.Slice;
 import com.Model.Intervals.IntervalFinder;
 import com.Model.Intervals.SimpleIntervalFinder;
 import com.Model.SliceRetriever;
+import com.SupportClasses.Config;
+import com.SupportClasses.ConsoleLogger;
+import com.SupportClasses.Logger;
 import com.View.GraphExporter;
 
 import java.util.List;
@@ -16,22 +19,26 @@ import java.util.List;
  */
 public class DataController {
 
-    private Config config;
-    private DataRetriever dataRetriever;
-    private SliceRetriever sliceRetriever;
-    private GraphExporter graphExporter;
-    private IntervalFinder intervalFinder;
+    private final Config config;
+    private final Logger logger;
+    private final DataRetriever dataRetriever;
+    private final SliceRetriever sliceRetriever;
+    private final GraphExporter graphExporter;
+    private final IntervalFinder intervalFinder;
 
-    private DatabaseService dbService;
+    private final DatabaseService dbService;
 
     private String tableName;
+    private int maxSlicesPerCombo;
 
     public DataController() {
         config = new Config();
+        logger = new ConsoleLogger();
         tableName = config.getTableName();
+        maxSlicesPerCombo = config.getMaxSlicesPerCombo();
         dbService = new DatabaseService(config.getDbName(), config.getUserName(), config.getPassword());
         dataRetriever = new DataRetriever(dbService);
-        sliceRetriever = new SliceRetriever(dbService);
+        sliceRetriever = new SliceRetriever(dbService, config.getApproximationType());
         graphExporter = new GraphExporter();
         intervalFinder = new SimpleIntervalFinder();
     }
@@ -45,26 +52,37 @@ public class DataController {
      * генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
      */
     public void exportSingleCategoryGraphsAccumulated() {
-        List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName);
+        logger.logMessage("Начинается экспорт графиков по одной категории...");
+        List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName, maxSlicesPerCombo);
+        int graphsExported = 0;
         for(List<Slice> slicesList: slices) {
             for(Slice slice: slicesList) {
-                graphExporter.exportGraphToPng(slice);
+                if(graphExporter.exportGraphToPng(slice)) {
+                    graphsExported++;
+                }
             }
+            logger.logMessage("Экспортировано " + graphsExported + " графиков");
         }
+        logger.logMessage("Закончился экспорт графиков по одной категории.");
     }
-
 
     /**
      * Получает разрезы данных, сгруппированных по всем сочетаниям двух категорий, делает накопление для каждого разреза,
      * генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
      */
     public void exportDoubleCombinationsGraphsAccumulated() {
-        List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName);
+        logger.logMessage("Начинается экспорт графиков по двум категориям...");
+        List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName, maxSlicesPerCombo);
+        int graphsExported = 0;
         for(List<Slice> slicesList: slices) {
             for(Slice slice: slicesList) {
-                graphExporter.exportGraphToPng(slice);
+                if(graphExporter.exportGraphToPng(slice)) {
+                    graphsExported++;
+                }
             }
+            logger.logMessage("Экспортировано " + graphsExported + " графиков");
         }
+        logger.logMessage("Закончился экспорт графиков по двум категориям.");
     }
 
     /**
@@ -80,16 +98,22 @@ public class DataController {
      * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
     public void exportSingleCategoryDecreaseGraphs(double minIntervalMult, double thresholdMult, int maxIntervals) {
-        List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName);
+        logger.logMessage("Начинается экспорт графиков уменьшения по одной категории...");
+        List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName, maxSlicesPerCombo);
+        int intervalsExported = 0;
         for(List<Slice> slicesList: slices) {
             List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, minIntervalMult, thresholdMult,
                     maxIntervals, true);
             int intervalId = 0;
             for(SuspiciousInterval interval: intervals) {
-                graphExporter.exportDecreaseGraphToPng(interval, intervalId);
+                if(graphExporter.exportDecreaseGraphToPng(interval, intervalId)) {
+                    intervalsExported++;
+                }
                 intervalId++;
             }
+            logger.logMessage("Экспортировано " + intervalsExported + " графиков");
         }
+        logger.logMessage("Закончился экспорт графиков уменьшения по одной категории.");
     }
 
     /**
@@ -105,16 +129,22 @@ public class DataController {
      * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
     public void exportDoubleCombinationsDecreaseGraphs(double minIntervalMult, double thresholdMult, int maxIntervals) {
-        List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName);
+        logger.logMessage("Начинается экспорт графиков уменьшения по двум категориям...");
+        List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName, maxSlicesPerCombo);
+        int intervalsExported = 0;
         for(List<Slice> slicesList: slices) {
             List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, minIntervalMult, thresholdMult,
                     maxIntervals, true);
             int intervalId = 0;
             for(SuspiciousInterval interval: intervals) {
-                graphExporter.exportDecreaseGraphToPng(interval, intervalId);
+                if(graphExporter.exportDecreaseGraphToPng(interval, intervalId)) {
+                    intervalsExported++;
+                }
                 intervalId++;
             }
+            logger.logMessage("Экспортировано " + intervalsExported + " графиков");
         }
+        logger.logMessage("Закончился экспорт графиков уменьшения по двум категориям.");
     }
 
     /**
@@ -154,13 +184,18 @@ public class DataController {
      * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
     public void exportSingleCategoryDecreasesToDB(double minIntervalMult, double thresholdMult, int maxIntervals) {
+        logger.logMessage("Начинается экспорт интервалов уменьшения по одной категории...");
         String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
-        List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName);
+        List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName, maxSlicesPerCombo);
+        int intervalsExported = 0;
         for(List<Slice> slicesList: slices) {
             List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, minIntervalMult, thresholdMult,
                     maxIntervals, false);
             dbService.insertDecrease(tableName + "_decreases", colNames, intervals);
+            intervalsExported += intervals.size();
+            logger.logMessage("Экспортировано " + intervalsExported + " интервалов");
         }
+        logger.logMessage("Закончился экспорт интервалов уменьшения по одной категории.");
     }
 
     /**
@@ -176,13 +211,18 @@ public class DataController {
      * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
     public void exportDoubleCombinationsDecreasesToDB(double minIntervalMult, double thresholdMult, int maxIntervals) {
+        logger.logMessage("Начинается экспорт интервалов уменьшения по двум категориям...");
         String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
-        List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName);
+        List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName, maxSlicesPerCombo);
+        int intervalsExported = 0;
         for(List<Slice> slicesList: slices) {
             List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slicesList, minIntervalMult, thresholdMult,
                     maxIntervals, false);
             dbService.insertDecrease(tableName + "_decreases", colNames, intervals);
+            intervalsExported += intervals.size();
+            logger.logMessage("Экспортировано " + intervalsExported + " интервалов");
         }
+        logger.logMessage("Закончился экспорт интервалов уменьшения по двум категориям.");
     }
 
     /**
@@ -220,13 +260,18 @@ public class DataController {
      * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
     public void exportSingleCategoryConstantsToDB(double minIntervalMult, double thresholdMult, int maxIntervals) {
+        logger.logMessage("Начинается экспорт интервалов отсутствия роста по одной категории...");
         String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
-        List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName);
+        List<List<Slice>> slices = sliceRetriever.getSingleCategorySlicesAccumulated(tableName, maxSlicesPerCombo);
+        int intervalsExported = 0;
         for(List<Slice> slicesList: slices) {
             List<SuspiciousInterval> intervals = intervalFinder.getConstantIntervals(slicesList, minIntervalMult, thresholdMult,
                     maxIntervals, false);
             dbService.insertConstant(tableName + "_constants", colNames, intervals);
+            intervalsExported += intervals.size();
+            logger.logMessage("Экспортировано " + intervalsExported + " интервалов");
         }
+        logger.logMessage("Закончился экспорт интервалов отсутствия роста по одной категории.");
     }
 
     /**
@@ -242,13 +287,18 @@ public class DataController {
      * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
     public void exportDoubleCombinationsConstantsToDB(double minIntervalMult, double thresholdMult, int maxIntervals) {
+        logger.logMessage("Начинается экспорт интервалов отсутствия роста по двум категориям...");
         String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
-        List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName);
+        List<List<Slice>> slices = sliceRetriever.getDoubleCombinationsSlicesAccumulated(tableName, maxSlicesPerCombo);
+        int intervalsExported = 0;
         for(List<Slice> slicesList: slices) {
             List<SuspiciousInterval> intervals = intervalFinder.getConstantIntervals(slicesList, minIntervalMult, thresholdMult,
                     maxIntervals, false);
             dbService.insertConstant(tableName + "_constants", colNames, intervals);
+            intervalsExported += intervals.size();
+            logger.logMessage("Экспортировано " + intervalsExported + " интервалов");
         }
+        logger.logMessage("Закончился экспорт интервалов отсутствия роста по двум категориям.");
     }
 
     /**

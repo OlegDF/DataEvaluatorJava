@@ -1,9 +1,12 @@
 package com.Model;
 
+import com.DataObjects.Approximations.ApproximationType;
 import com.DataObjects.Slice;
-import com.DataObjects.SuspiciousInterval;
+import com.SupportClasses.ConsoleLogger;
+import com.SupportClasses.Logger;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -13,84 +16,48 @@ import java.util.List;
 public class SliceRetriever {
 
     private final DatabaseService databaseService;
+    private final Logger logger;
+    private final ApproximationType approximationType;
 
-    public SliceRetriever(DatabaseService databaseService) {
+    public SliceRetriever(DatabaseService databaseService, ApproximationType approximationType) {
         this.databaseService = databaseService;
+        this.approximationType = approximationType;
+        logger = new ConsoleLogger();
     }
 
     /**
-     * Получает разрезы данных, сгруппированных по одной категории.
+     * Получает разрезы данных, сгруппированных по ряду категорий.
      *
      * @param tableName - название таблицы, из которой необходимо получать данные
-     * @param category - название категории
+     * @param categories - названия категорий
+     * @param maxSlices - максимальное количество разрезов, возвращаемое методом
      *
      * @return список разрезов
      */
-    public List<Slice> getCategorySlices(String tableName, String category) {
+    public List<Slice> getCategorySlices(String tableName, String[] categories, int maxSlices) {
+        logger.logMessage("Начинается получение разрезов по категориям " + Arrays.toString(categories) + "...");
         List<Slice> res = new ArrayList<>();
-        String[] categoryLabels = databaseService.getUniqueLabels(tableName, category);
-        String[] colNames = {category};
-        for(String label: categoryLabels) {
-            String[] labels = {"'" + label + "'"};
-            res.add(databaseService.getSlice(tableName, colNames, labels));
+        List<String[]> labelCombinations = databaseService.getLabelCombinations(tableName, categories, maxSlices);
+        for(String[] combination: labelCombinations) {
+            res.add(databaseService.getSlice(tableName, categories, combination, approximationType));
         }
         res.sort(Comparator.comparingLong(o -> -o.totalAmount));
-        return res.size() >= 10 ? res.subList(0, 10) : res;
-    }
-
-    /**
-     * Получает разрезы данных, сгруппированных по двум категориям.
-     *
-     * @param tableName - название таблицы, из которой необходимо получать данные
-     * @param category1 - название первой категории
-     * @param category2 - название второй категории
-     *
-     * @return список разрезов
-     */
-    public List<Slice> getTwoCategorySlices(String tableName, String category1, String category2) {
-        List<Slice> res = new ArrayList<>();
-        String[] category1Labels = databaseService.getUniqueLabels(tableName, category1);
-        String[] category2Labels = databaseService.getUniqueLabels(tableName, category2);
-        String[] colNames = {category1, category2};
-        for(String label1: category1Labels) {
-            for(String label2: category2Labels) {
-                String[] labels = {"'" + label1 + "'", "'" + label2 + "'"};
-                res.add(databaseService.getSlice(tableName, colNames, labels));
-            }
-        }
-        res.sort(Comparator.comparingLong(o -> -o.totalAmount));
-        return res.size() >= 10 ? res.subList(0, 10) : res;
-    }
-
-    /**
-     * Получает разрезы данных, сгруппированных по типу и единице измерения, а также делает накопление для каждого разреза.
-     *
-     * @param tableName - название таблицы, из которой необходимо получать данные
-     * @param category - название категории
-     *
-     * @return список разрезов с накоплением
-     */
-    public List<Slice> getCategorySlicesAccumulated(String tableName, String category) {
-        List<Slice> res = new ArrayList<>();
-        List<Slice> slices = getCategorySlices(tableName, category);
-        for(Slice slice: slices) {
-            res.add(slice.getAccumulation());
-        }
+        logger.logMessage("Закончилось получение разрезов по категории " + Arrays.toString(categories) + ", получено " + res.size() + " разрезов.");
         return res;
     }
 
     /**
-     * Получает разрезы данных, сгруппированных по типу и единице измерения, а также делает накопление для каждого разреза.
+     * Получает разрезы данных, сгруппированных по ряду категорий, а также делает накопление для каждого разреза.
      *
      * @param tableName - название таблицы, из которой необходимо получать данные
-     * @param category1 - название первой категории
-     * @param category2 - название второй категории
+     * @param categories - названия категорий
+     * @param maxSlices - максимальное количество разрезов, возвращаемое методом
      *
      * @return список разрезов с накоплением
      */
-    public List<Slice> getTwoCategorySlicesAccumulated(String tableName, String category1, String category2) {
+    public List<Slice> getCategorySlicesAccumulated(String tableName, String[] categories, int maxSlices) {
         List<Slice> res = new ArrayList<>();
-        List<Slice> slices = getTwoCategorySlices(tableName, category1, category2);
+        List<Slice> slices = getCategorySlices(tableName, categories, maxSlices);
         for(Slice slice: slices) {
             res.add(slice.getAccumulation());
         }
@@ -100,15 +67,17 @@ public class SliceRetriever {
     /**
      * Получает разрезы данных, сгруппированных по всем значениям одной категории, делает накопление для каждого разреза,
      * генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
+     * @param maxSlices - максимальное количество разрезов с одной комбинацией ярлыков, возвращаемое методом
      *
      * @param tableName - название таблицы, из которой необходимо получать данные
      * @return список разрезов с накоплением
      */
-    public List<List<Slice>> getSingleCategorySlicesAccumulated(String tableName) {
+    public List<List<Slice>> getSingleCategorySlicesAccumulated(String tableName, int maxSlices) {
         List<String> categoryNames = databaseService.getCategoryNames(tableName);
         List<List<Slice>> res = new ArrayList<>();
         for(String categoryName: categoryNames) {
-            res.add(getCategorySlicesAccumulated(tableName, categoryName));
+            String[] categories = {categoryName};
+            res.add(getCategorySlicesAccumulated(tableName, categories, maxSlices));
         }
         return res;
     }
@@ -116,16 +85,18 @@ public class SliceRetriever {
     /**
      * Получает разрезы данных, сгруппированных по всем сочетаниям двух категорий, делает накопление для каждого разреза,
      * генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
+     * @param maxSlices - максимальное количество разрезов с одной комбинацией ярлыков, возвращаемое методом
      *
      * @param tableName - название таблицы, из которой необходимо получать данные
      * @return список разрезов с накоплением
      */
-    public List<List<Slice>> getDoubleCombinationsSlicesAccumulated(String tableName) {
+    public List<List<Slice>> getDoubleCombinationsSlicesAccumulated(String tableName, int maxSlices) {
         List<String> categoryNames = databaseService.getCategoryNames(tableName);
         List<List<Slice>> res = new ArrayList<>();
         for(int i = 0; i < categoryNames.size() - 1; i++) {
             for(int j = i + 1; j < categoryNames.size(); j++) {
-                res.add(getTwoCategorySlicesAccumulated(tableName, categoryNames.get(i), categoryNames.get(j)));
+                String[] categories = {categoryNames.get(i), categoryNames.get(j)};
+                res.add(getCategorySlicesAccumulated(tableName, categories, maxSlices));
             }
         }
         return res;

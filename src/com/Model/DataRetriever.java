@@ -1,8 +1,13 @@
 package com.Model;
 
+import com.SupportClasses.ConsoleLogger;
+import com.SupportClasses.Logger;
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -11,9 +16,11 @@ import java.util.regex.Pattern;
 public class DataRetriever {
 
     private final DatabaseService databaseService;
+    private final Logger logger;
 
     public DataRetriever(DatabaseService databaseService) {
         this.databaseService = databaseService;
+        logger = new ConsoleLogger();
     }
 
     /**
@@ -23,6 +30,7 @@ public class DataRetriever {
      * @param tableName - название файла csv/путь к нему
      */
     public void csvToDatabase(String tableName) {
+        logger.logMessage("Начинается экспорт файла " + tableName + ".csv в таблицу...");
         try {
             BufferedReader lineReader = new BufferedReader(new FileReader(tableName + ".csv"));
 
@@ -33,13 +41,25 @@ public class DataRetriever {
 
             databaseService.createTable(tableName, colNames, colTypes);
 
+            int rowsExported = 0;
+            List<String[]> rows = new ArrayList<>();
             while(rowLine != null) {
                 row = rowLine.split(";", -1);
-                databaseService.insertData(tableName, colNames, colTypes, row);
+                rows.add(row);
                 rowLine = lineReader.readLine();
+                rowsExported++;
+                if(rowsExported % 1000 == 0) {
+                    databaseService.insertData(tableName, colNames, colTypes, rows);
+                    rows = new ArrayList<>();
+                    logger.logMessage("Экспортировано " + rowsExported + " строк");
+                }
             }
+            databaseService.insertData(tableName, colNames, colTypes, rows);
+            logger.logMessage("Экспортировано " + rowsExported + " строк");
+            logger.logMessage("Закончен экспорт файла " + tableName + ".csv в таблицу.");
         } catch (IOException ex) {
             System.err.println(ex);
+            logger.logError("Не удалось экспортировать файл" + tableName + ".csv");
         }
     }
 

@@ -24,7 +24,12 @@ public class SuspiciousInterval {
         if(pos1 < 0 || pos1 >= slice.points.length || pos2 < 0 || pos2 >= slice.points.length) {
             return -1;
         }
-        return getRelativeDiff() * getRelativeDiff() / Math.sqrt(getRelativeWidth());
+        double relativeSigma = slice.getSigma() / slice.valueRange;
+        if(relativeSigma != 0) {
+            return getRelativeDiff() * getRelativeDiff() / (getRelativeWidth()) / (slice.getSigma() / slice.valueRange);
+        } else {
+            return getRelativeDiff() * getRelativeDiff() / (getRelativeWidth());
+        }
     }
 
     /**

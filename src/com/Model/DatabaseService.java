@@ -1,7 +1,10 @@
 package com.Model;
+import com.DataObjects.Approximations.ApproximationType;
 import com.DataObjects.Slice;
 import com.DataObjects.SlicePoint;
 import com.DataObjects.SuspiciousInterval;
+import com.SupportClasses.ConsoleLogger;
+import com.SupportClasses.Logger;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -15,9 +18,11 @@ import java.util.List;
  */
 public class DatabaseService {
 
-    public final String labelNotPresent = "NOT_APPLICABLE";
+    private final String labelNotPresent = "NOT_APPLICABLE";
 
     private Connection connection = null;
+
+    private final Logger logger;
 
     /**
      * Конструктор, устанавливающий соединение с базой данных с указанным названием, именем пользователя и паролем.
@@ -27,6 +32,7 @@ public class DatabaseService {
      * @param password - пароль
      */
     public DatabaseService(String db, String user, String password) {
+        logger = new ConsoleLogger();
         openConnection(db, user, password);
     }
 
@@ -34,7 +40,9 @@ public class DatabaseService {
         final String url = "jdbc:postgresql://localhost/" + db + "?user=" + user + "&password=" + password;
         try {
             connection = DriverManager.getConnection(url);
+            logger.logMessage("Установлено подключение к базе данных " + db);
         } catch (SQLException ex) {
+            logger.logError("Не удалось подключиться к базе данных " + db);
             handleSQLException(ex);
         }
     }
@@ -48,9 +56,10 @@ public class DatabaseService {
      * @param colTypes - типы данных в соответствующих столбцах
      */
     public void createTable(String tableName, String[] colNames, String[] colTypes) {
+        StringBuilder query = new StringBuilder();
         try {
             connection.createStatement().executeUpdate("DROP TABLE IF EXISTS " + tableName + ";");
-            StringBuilder query = new StringBuilder("CREATE TABLE " + tableName + " (");
+            query.append("CREATE TABLE ").append(tableName).append(" (");
             for(int i = 0; i < colNames.length; i++) {
                 query.append(colNames[i]).append(" ").append(colTypes[i]);
                 if(i < colNames.length - 1) {
@@ -59,29 +68,33 @@ public class DatabaseService {
             }
             query.append(");");
             connection.createStatement().executeUpdate(query.toString());
+            logger.logMessage("Создана таблица: " + tableName);
         } catch (SQLException ex) {
+            logger.logError("Не удалось создать таблицу по запросу: " + query);
             handleSQLException(ex);
         }
     }
 
     /**
-     * Вставляет в таблицу новую строку с указанными значениями данных.
+     * Вставляет в таблицу новуые строки с указанными значениями данных.
      *
      * @param tableName - название таблицы
      * @param colNames - названия столбцов таблицы
      * @param colTypes - типы данных в соответствующих столбцах
-     * @param row - значения в новой строке в строковом виде
+     * @param rows - значения в новоых строках в строковом виде
      */
-    public void insertData(String tableName, String[] colNames, String[] colTypes, String[] row) {
-        try {
-            StringBuilder query = new StringBuilder("INSERT INTO " + tableName + "(");
-            for(int i = 0; i < colNames.length; i++) {
-                query.append(colNames[i]);
-                if(i < colNames.length - 1) {
-                    query.append(", ");
-                }
+    public void insertData(String tableName, String[] colNames, String[] colTypes, List<String[]> rows) {
+        StringBuilder query = new StringBuilder();
+        query.append("INSERT INTO ").append(tableName).append("(");
+        for(int i = 0; i < colNames.length; i++) {
+            query.append(colNames[i]);
+            if(i < colNames.length - 1) {
+                query.append(", ");
             }
-            query.append(") VALUES (");
+        }
+        query.append(") VALUES (");
+        for(int k = 0; k < rows.size(); k++) {
+            String[] row = rows.get(k);
             for(int i = 0; i < row.length; i++) {
                 if(colTypes[i].equals("varchar(255)") || colTypes[i].equals("timestamptz")) {
                     query.append("'").append(row[i]).append("'");
@@ -92,9 +105,15 @@ public class DatabaseService {
                     query.append(", ");
                 }
             }
-            query.append(");");
+            if(k < rows.size() - 1) {
+                query.append("),(");
+            }
+        }
+        query.append(");");
+        try {
             connection.createStatement().executeUpdate(query.toString());
         } catch (SQLException ex) {
+            logger.logError("Не удалось вставить строку данных по запросу: " + query);
             handleSQLException(ex);
         }
     }
@@ -105,11 +124,13 @@ public class DatabaseService {
      * @param tableName - название таблицы
      * @param colNames - названия столбцов, по которым отбираются данные
      * @param labels - значения в соответствующих столбцах в строковом виде
+     * @param approximationType - тип функции приближения
      * @return объект-разрез
      */
-    public Slice getSlice(String tableName, String[] colNames, String[] labels) {
+    public Slice getSlice(String tableName, String[] colNames, String[] labels, ApproximationType approximationType) {
+        StringBuilder query = new StringBuilder();
         try {
-            StringBuilder query = new StringBuilder("SELECT * FROM " + tableName + " WHERE ");
+            query.append("SELECT * FROM ").append(tableName).append(" WHERE ");
             for(int i = 0; i < colNames.length; i++) {
                 query.append(colNames[i]).append("=");
                 query.append(labels[i]);
@@ -128,38 +149,55 @@ public class DatabaseService {
                 points[i] = new SlicePoint(res.getLong("value_1"), res.getLong("amount"), res.getTimestamp("first_date"));
                 i++;
             }
-            return new Slice(tableName, colNames, labels, points);
+            return new Slice(tableName, colNames, labels, points, approximationType);
         } catch (SQLException ex) {
+            logger.logError("Не удалось получить разрез по запросу: " + query);
             handleSQLException(ex);
         }
         return new Slice(tableName, colNames, labels);
     }
 
     /**
-     * Получает список уникальных значений, которые принимают данные в указанном столбце.
+     * Получает список уникальных значений, которые принимают данные в указанных столбцах.
      *
      * @param tableName - название таблицы
-     * @param colName - название столбца
+     * @param colNames - названия столбцов
      * @return список значений в строковом виде
      */
-    public String[] getUniqueLabels(String tableName, String colName) {
+    public List<String[]> getLabelCombinations(String tableName, String[] colNames, int maxCount) {
+        StringBuilder query = new StringBuilder();
         try {
-            StringBuilder query = new StringBuilder("SELECT DISTINCT " + colName + " FROM " + tableName + ";");
-            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
-            res.last();
-            int length = res.getRow();
-            String[] labels = new String[length];
-            res.beforeFirst();
-            int i = 0;
-            while(res.next()) {
-                labels[i] = res.getString(colName);
-                i++;
+            query.append("SELECT ");
+            for(int i = 0; i < colNames.length; i++) {
+                query.append(colNames[i]);
+                if(i < colNames.length - 1) {
+                    query.append(", ");
+                }
             }
-            return labels;
+            query.append(" FROM ").append(tableName).append(" GROUP BY ");
+            for(int i = 0; i < colNames.length; i++) {
+                query.append(colNames[i]);
+                if(i < colNames.length - 1) {
+                    query.append(", ");
+                }
+            }
+            query.append(" ORDER BY sum(amount) DESC LIMIT ").append(maxCount).append(";");
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
+            res.beforeFirst();
+            List<String[]> labelCombinations = new ArrayList<>();
+            while(res.next()) {
+                String[] combination = new String[colNames.length];
+                for(int i = 0; i < colNames.length; i++) {
+                    combination[i] = "'" + res.getString(colNames[i]) + "'";
+                }
+                labelCombinations.add(combination);
+            }
+            return labelCombinations;
         } catch (SQLException ex) {
+            logger.logError("Не удалось получить разрез по запросу: " + query);
             handleSQLException(ex);
         }
-        return new String[0];
+        return new ArrayList<>();
     }
 
     /**
@@ -169,8 +207,9 @@ public class DatabaseService {
      * @return список столбцов в строковом виде
      */
     public List<String> getCategoryNames(String tableName) {
+        String query = "";
         try {
-            String query = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "';";
+            query = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "';";
             ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query);
             res.last();
             List<String> categoryNames = new ArrayList<>();
@@ -183,6 +222,7 @@ public class DatabaseService {
             }
             return categoryNames;
         } catch (SQLException ex) {
+            logger.logError("Не удалось получить список столбцов по запросу: " + query);
             handleSQLException(ex);
         }
         return new ArrayList<>();
@@ -196,8 +236,9 @@ public class DatabaseService {
      * @param intervals - вставляемые интервалы
      */
     public void insertDecrease(String tableName, String[] colNames, List<SuspiciousInterval> intervals) {
+        StringBuilder query = new StringBuilder();
         try {
-            StringBuilder query = new StringBuilder("INSERT INTO " + tableName + "(");
+            query.append("INSERT INTO ").append(tableName).append("(");
             for(int i = 0; i < colNames.length; i++) {
                 query.append(colNames[i]);
                 if(i < colNames.length - 1) {
@@ -244,6 +285,7 @@ public class DatabaseService {
             query.append(");");
             connection.createStatement().executeUpdate(query.toString());
         } catch (SQLException ex) {
+            logger.logError("Не удалось вставить интервалы с уменьшением по запросу: " + query);
             handleSQLException(ex);
         }
     }
@@ -254,6 +296,7 @@ public class DatabaseService {
      *
      * @param tableName - название таблицы
      * @param colNames - названия столбцов таблицы
+     * @param approximationType - тип приближения срезов
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
      * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
@@ -261,10 +304,12 @@ public class DatabaseService {
      *                        на всем разрезе, от 0 до 1)
      * @return список интервалов
      */
-    public List<SuspiciousInterval> getDecreases(String tableName, String[] colNames, double minIntervalMult, double thresholdMult) {
+    public List<SuspiciousInterval> getDecreases(String tableName, String[] colNames, ApproximationType approximationType,
+                                                 double minIntervalMult, double thresholdMult) {
+        StringBuilder query = new StringBuilder();
         try {
             String tableDecName = tableName + "_decreases";
-            StringBuilder query = new StringBuilder("SELECT * FROM ").append(tableDecName).append(" WHERE ");
+            query.append("SELECT * FROM ").append(tableDecName).append(" WHERE ");
             List<String> categoryNames = getCategoryNames(tableDecName);
             for(int i = 0; i < categoryNames.size(); i++) {
                 boolean categoryIsPresent = false;
@@ -308,13 +353,14 @@ public class DatabaseService {
                     }
                 }
                 if(slice == null) {
-                    slice = getSlice(tableName, colNames, labels).getAccumulation();
+                    slice = getSlice(tableName, colNames, labels, approximationType).getAccumulation();
                     slices.add(slice);
                 }
                 intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2")));
             }
             return intervals;
         } catch (SQLException ex) {
+            logger.logError("Не удалось получить интервалы с уменьшением по запросу: " + query);
             handleSQLException(ex);
         }
         return new ArrayList<>();
@@ -330,8 +376,9 @@ public class DatabaseService {
      * @param intervals - вставляемые интервалы
      */
     public void insertConstant(String tableName, String[] colNames, List<SuspiciousInterval> intervals) {
+        StringBuilder query = new StringBuilder();
         try {
-            StringBuilder query = new StringBuilder("INSERT INTO " + tableName + "(");
+            query.append("INSERT INTO ").append(tableName).append("(");
             for(int i = 0; i < colNames.length; i++) {
                 query.append(colNames[i]);
                 if(i < colNames.length - 1) {
@@ -377,6 +424,7 @@ public class DatabaseService {
             query.append(");");
             connection.createStatement().executeUpdate(query.toString());
         } catch (SQLException ex) {
+            logger.logError("Не удалось вставить интервалы с отсутствием роста по запросу: " + query);
             handleSQLException(ex);
         }
     }
@@ -387,6 +435,7 @@ public class DatabaseService {
      *
      * @param tableName - название таблицы
      * @param colNames - названия столбцов таблицы
+     * @param approximationType - тип приближения срезов
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
      * @param thresholdMult - максимальная разность между максимальной и минимальной величиной для интервалов, которые будут
@@ -394,10 +443,12 @@ public class DatabaseService {
      *                        на всем разрезе, от 0 до 1)
      * @return список интервалов
      */
-    public List<SuspiciousInterval> getConstants(String tableName, String[] colNames, double minIntervalMult, double thresholdMult) {
+    public List<SuspiciousInterval> getConstants(String tableName, String[] colNames, ApproximationType approximationType,
+                                                 double minIntervalMult, double thresholdMult) {
+        StringBuilder query = new StringBuilder();
         try {
             String tableDecName = tableName + "_constants";
-            StringBuilder query = new StringBuilder("SELECT * FROM ").append(tableDecName).append(" WHERE ");
+            query.append("SELECT * FROM ").append(tableDecName).append(" WHERE ");
             List<String> categoryNames = getCategoryNames(tableDecName);
             for(int i = 0; i < categoryNames.size(); i++) {
                 boolean categoryIsPresent = false;
@@ -441,13 +492,14 @@ public class DatabaseService {
                     }
                 }
                 if(slice == null) {
-                    slice = getSlice(tableName, colNames, labels).getAccumulation();
+                    slice = getSlice(tableName, colNames, labels, approximationType).getAccumulation();
                     slices.add(slice);
                 }
                 intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2")));
             }
             return intervals;
         } catch (SQLException ex) {
+            logger.logError("Не удалось получить интервалы с отсутствием роста по запросу: " + query);
             handleSQLException(ex);
         }
         return new ArrayList<>();

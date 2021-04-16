@@ -1,16 +1,20 @@
 package com.View;
 
-import com.Controler.Config;
+import com.DataObjects.Approximations.ApproximationType;
+import com.SupportClasses.Config;
 import com.DataObjects.SuspiciousInterval;
 import com.Model.DatabaseService;
 import com.Model.Intervals.IntervalFinder;
 import com.Model.Intervals.SimpleIntervalFinder;
+import com.SupportClasses.ConsoleLogger;
+import com.SupportClasses.Logger;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.swing.ChartPanel;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -21,6 +25,7 @@ public class GraphViewer {
     private final String undefinedCategory = "-";
 
     private final Config config;
+    private final Logger logger;
     private final IntervalFinder intervalFinder;
     private final GraphExporter graphExporter;
     private final DatabaseService dbService;
@@ -46,6 +51,7 @@ public class GraphViewer {
     private final JLabel currentGraphNumber;
 
     private String tableName;
+    private ApproximationType approximationType;
     private List<SuspiciousInterval> decreaseIntervals;
     private List<JFreeChart> currentGraphs;
     private int currentInterval;
@@ -55,7 +61,9 @@ public class GraphViewer {
      */
     public GraphViewer() {
         config = new Config();
+        logger = new ConsoleLogger();
         tableName = config.getTableName();
+        approximationType = config.getApproximationType();
         dbService = new DatabaseService(config.getDbName(), config.getUserName(), config.getPassword());
         intervalFinder = new SimpleIntervalFinder();
         graphExporter = new GraphExporter();
@@ -152,13 +160,13 @@ public class GraphViewer {
 
         JLabel minIntervalMultLabel = new JLabel();
         minIntervalMultLabel.setText("Ограничение на ширину: ");
-        setSize(minIntervalMultLabel, 200, 30);
+        setSize(minIntervalMultLabel, 250, 30);
 
         minIntervalMultNumber.setText((double)minIntervalMultSlider.getValue() / sliderWidth + "");
         setSize(minIntervalMultNumber, 50, 30);
 
         JPanel minIntervalMultPanel = new JPanel();
-        setSize(minIntervalMultPanel, 500, 30);
+        setSize(minIntervalMultPanel, 550, 30);
         minIntervalMultPanel.add(minIntervalMultLabel, constraints);
         minIntervalMultPanel.add(minIntervalMultSlider, constraints);
         minIntervalMultPanel.add(minIntervalMultNumber, constraints);
@@ -171,13 +179,13 @@ public class GraphViewer {
 
         JLabel thresholdMultLabel = new JLabel();
         thresholdMultLabel.setText("Ограничение на разность величин: ");
-        setSize(thresholdMultLabel, 200, 30);
+        setSize(thresholdMultLabel, 250, 30);
 
         thresholdMultNumber.setText((double)thresholdMultSlider.getValue() / sliderWidth + "");
         setSize(thresholdMultNumber, 50, 30);
 
         JPanel thresholdMultPanel = new JPanel();
-        setSize(thresholdMultPanel, 500, 30);
+        setSize(thresholdMultPanel, 550, 30);
         thresholdMultPanel.add(thresholdMultLabel, constraints);
         thresholdMultPanel.add(thresholdMultSlider, constraints);
         thresholdMultPanel.add(thresholdMultNumber, constraints);
@@ -263,6 +271,7 @@ public class GraphViewer {
     private void setupWindow() {
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         mainFrame.setSize(650, 700);
+        mainFrame.setTitle("Графики интервалов");
         mainFrame.setLayout(new BoxLayout(mainFrame.getContentPane(), BoxLayout.Y_AXIS));
         mainFrame.setVisible(true);
         mainFrame.revalidate();
@@ -284,14 +293,18 @@ public class GraphViewer {
         if(categories.size() > 0) {
             switch(graphTypeBox.getSelectedIndex()) {
                 case 0:
-                    decreaseIntervals = dbService.getDecreases(tableName, colNames,
+                    logger.logMessage("Начинается получение графиков уменьшения...");
+                    decreaseIntervals = dbService.getDecreases(tableName, colNames, approximationType,
                             (double)minIntervalMultSlider.getValue() / sliderWidth,
                             (double)thresholdMultSlider.getValue() / sliderWidth);
+                    logger.logMessage("Закончено получение графиков уменьшения.");
                     break;
                 case 1:
-                    decreaseIntervals = dbService.getConstants(tableName, colNames,
+                    logger.logMessage("Начинается получение графиков отсутствия роста...");
+                    decreaseIntervals = dbService.getConstants(tableName, colNames, approximationType,
                             (double)minIntervalMultSlider.getValue() / sliderWidth,
                             (double)thresholdMultSlider.getValue() / sliderWidth);
+                    logger.logMessage("Закончено получение графиков отсутствия роста.");
                     break;
             }
             intervalFinder.removeIntersectingIntervals(decreaseIntervals);

@@ -1,5 +1,7 @@
 package com.DataObjects;
 
+import com.DataObjects.Approximations.*;
+
 /**
  * Объект, содержащий в себе данные о разрезе - список точек с датами и соответствующими значениями, а также названия и
  * значения столбцов, по которым сделан разрез.
@@ -11,10 +13,12 @@ public class Slice {
     public final String[] labels;
     public final SlicePoint[] points;
     public final long valueRange, dateRange, totalAmount;
+    private final Approximation approximation;
 
     /**
      * Конструктор пустого разреза, для которого не найдено подходящих точек.
      *
+     * @param tableName - таблица, из которой получен разрез
      * @param colNames - названия столбцов, по которым создается разрез
      * @param labels - значения соответствующих столбцов
      */
@@ -26,16 +30,19 @@ public class Slice {
         this.valueRange = 0;
         this.dateRange = 0;
         this.totalAmount = 0;
+        this.approximation = new EmptyApproximation();
     }
 
     /**
      * Конструктор разреза, содержащего набор точек.
      *
+     * @param tableName - таблица, из которой получен разрез
      * @param colNames - названия столбцов, по которым создается разрез
      * @param labels - значения соответствующих столбцов
      * @param points - список точек разреза
+     * @param approximationType - тип функции приближения
      */
-    public Slice(String tableName, String[] colNames, String[] labels, SlicePoint[] points) {
+    public Slice(String tableName, String[] colNames, String[] labels, SlicePoint[] points, ApproximationType approximationType) {
         this.tableName = tableName;
         this.colNames = colNames;
         this.labels = labels;
@@ -48,6 +55,19 @@ public class Slice {
             this.valueRange = 0;
             this.dateRange = 0;
             this.totalAmount = 0;
+        }
+        switch(approximationType) {
+            case EMPTY:
+                this.approximation = new EmptyApproximation();
+                break;
+            case LINEAR:
+                this.approximation = new LinearRegression(this);
+                break;
+            case AVERAGES:
+                this.approximation = new AveragesApproximation(this);
+                break;
+            default:
+                this.approximation = new EmptyApproximation();
         }
     }
 
@@ -63,7 +83,7 @@ public class Slice {
             accumulatedValue += points[i].value * points[i].amount;
             pointsAccumulated[i] = new SlicePoint(accumulatedValue, 1, points[i].date);
         }
-        return new Slice(tableName, colNames, labels, pointsAccumulated);
+        return new Slice(tableName, colNames, labels, pointsAccumulated, approximation.getType());
     }
 
     /**
@@ -120,6 +140,25 @@ public class Slice {
      */
     public long getDateDistance(int pos1, int pos2) {
         return points[pos2].date.getTime() - points[pos1].date.getTime();
+    }
+
+    /**
+     * Получает среднеквадратичное отклонение относительно функции приближения.
+     *
+     * @return среднеквадратичное отклонение
+     */
+    public double getSigma() {
+        return approximation.getSigma();
+    }
+
+    /**
+     * Получает значение функции линейной регрессии в определенной точке во времени.
+     *
+     * @param pos - номер точки среза
+     * @return значение регрессии
+     */
+    public long getApproximate(int pos) {
+        return approximation.getApproximate(this, pos);
     }
 
     /**
