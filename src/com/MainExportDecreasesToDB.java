@@ -10,13 +10,11 @@ public class MainExportDecreasesToDB {
 
         dataController.createDecreasesTable();
 
-        dataController.exportSingleCategoryDecreasesToDB(0.05, 0.01, Integer.MAX_VALUE);
-        dataController.exportDoubleCombinationsDecreasesToDB(0.05, 0.01, Integer.MAX_VALUE);
+        dataController.exportDecreasesToDB(0.05, 0.1, Integer.MAX_VALUE);
 
         dataController.createConstantsTable();
 
-        dataController.exportSingleCategoryConstantsToDB(0.05, 0.5, Integer.MAX_VALUE);
-        dataController.exportDoubleCombinationsConstantsToDB(0.05, 0.5, Integer.MAX_VALUE);
+        dataController.exportConstantsToDB(0.05, 1, Integer.MAX_VALUE);
 
         dataController.close();
 

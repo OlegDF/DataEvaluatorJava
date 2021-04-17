@@ -2,6 +2,10 @@ package com.DataObjects;
 
 import com.DataObjects.Approximations.*;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Объект, содержащий в себе данные о разрезе - список точек с датами и соответствующими значениями, а также названия и
  * значения столбцов, по которым сделан разрез.
@@ -77,13 +81,17 @@ public class Slice {
      * @return новый разрез с накоплением
      */
     public Slice getAccumulation() {
-        SlicePoint[] pointsAccumulated = new SlicePoint[points.length];
-        long accumulatedValue = 0;
-        for(int i = 0; i < points.length; i++) {
-            accumulatedValue += points[i].value * points[i].amount;
-            pointsAccumulated[i] = new SlicePoint(accumulatedValue, 1, points[i].date);
+        List<SlicePoint> pointsTruncated = new ArrayList<>();
+        pointsTruncated.add(new SlicePoint(points[0].value * points[0].amount, 1, points[0].date));
+        for(int i = 1; i < points.length; i++) {
+            SlicePoint newPoint = new SlicePoint(pointsTruncated.get(pointsTruncated.size() - 1).value + points[i].value * points[i].amount,
+                    1, points[i].date);
+            if(points[i].date.getTime() == pointsTruncated.get(pointsTruncated.size() - 1).date.getTime()) {
+                pointsTruncated.remove(pointsTruncated.size() - 1);
+            }
+            pointsTruncated.add(newPoint);
         }
-        return new Slice(tableName, colNames, labels, pointsAccumulated, approximation.getType());
+        return new Slice(tableName, colNames, labels, pointsTruncated.toArray(new SlicePoint[0]), approximation.getType());
     }
 
     /**
@@ -152,6 +160,17 @@ public class Slice {
     }
 
     /**
+     * Получает среднеквадратичное отклонение относительно функции приближения, деленное на разность максимума и минимума
+     * на всем отрезке.
+     *
+     * @return относительное среднеквадратичное отклонение
+     */
+    public double getRelativeSigma() {
+        double res = approximation.getSigma() / getValueRange();
+        return res == 0 ? 1 : res;
+    }
+
+    /**
      * Получает значение функции линейной регрессии в определенной точке во времени.
      *
      * @param pos - номер точки среза
@@ -203,6 +222,19 @@ public class Slice {
      */
     private long getDateRange() {
         return points[points.length - 1].date.getTime() - points[0].date.getTime();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Slice slice = (Slice) o;
+        return Arrays.equals(points, slice.points);
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(points);
     }
 
 }

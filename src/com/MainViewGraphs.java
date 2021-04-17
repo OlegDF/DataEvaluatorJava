@@ -1,6 +1,5 @@
 package com;
 
-import com.Controler.DataController;
 import com.View.GraphViewer;
 
 public class MainViewGraphs {

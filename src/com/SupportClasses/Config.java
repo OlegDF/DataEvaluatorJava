@@ -48,6 +48,7 @@ public class Config {
         res.putIfAbsent("password", "comparison419");
         res.putIfAbsent("table_name", "data_v06");
         res.putIfAbsent("max_slices_per_combo", "16");
+        res.putIfAbsent("max_categories_per_combo", "3");
         res.putIfAbsent("approximation_type", "linear");
         return res;
     }
@@ -75,6 +76,15 @@ public class Config {
             return 16;
         }
     }
+
+    public int getMaxCategoriesPerCombo() {
+        try {
+            return Integer.parseInt(config.get("max_categories_per_combo"));
+        } catch (NumberFormatException e) {
+            return 3;
+        }
+    }
+
     public ApproximationType getApproximationType() {
         String approximationTypeStr = config.get("approximation_type");
         switch(approximationTypeStr) {

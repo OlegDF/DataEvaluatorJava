@@ -15,12 +15,12 @@ import java.util.List;
  */
 public class SliceRetriever {
 
-    private final DatabaseService databaseService;
+    private final DatabaseService dbService;
     private final Logger logger;
     private final ApproximationType approximationType;
 
-    public SliceRetriever(DatabaseService databaseService, ApproximationType approximationType) {
-        this.databaseService = databaseService;
+    public SliceRetriever(DatabaseService dbService, ApproximationType approximationType) {
+        this.dbService = dbService;
         this.approximationType = approximationType;
         logger = new ConsoleLogger();
     }
@@ -37,9 +37,9 @@ public class SliceRetriever {
     public List<Slice> getCategorySlices(String tableName, String[] categories, int maxSlices) {
         logger.logMessage("Начинается получение разрезов по категориям " + Arrays.toString(categories) + "...");
         List<Slice> res = new ArrayList<>();
-        List<String[]> labelCombinations = databaseService.getLabelCombinations(tableName, categories, maxSlices);
+        List<String[]> labelCombinations = dbService.getLabelCombinations(tableName, categories, maxSlices);
         for(String[] combination: labelCombinations) {
-            res.add(databaseService.getSlice(tableName, categories, combination, approximationType));
+            res.add(dbService.getSlice(tableName, categories, combination, approximationType));
         }
         res.sort(Comparator.comparingLong(o -> -o.totalAmount));
         logger.logMessage("Закончилось получение разрезов по категории " + Arrays.toString(categories) + ", получено " + res.size() + " разрезов.");
@@ -65,39 +65,23 @@ public class SliceRetriever {
     }
 
     /**
-     * Получает разрезы данных, сгруппированных по всем значениям одной категории, делает накопление для каждого разреза,
-     * генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
-     * @param maxSlices - максимальное количество разрезов с одной комбинацией ярлыков, возвращаемое методом
+     * Получает разрезы данных, сгруппированных по всем сочетаниям одной или более категорий, делает накопление для
+     * каждого разреза, генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
      *
+     * @param maxSlices - максимальное количество разрезов с одной комбинацией ярлыков, возвращаемое методом
+     * @param maxCategories - максимальное количество категорий, по которым группируется каждый разрез.
      * @param tableName - название таблицы, из которой необходимо получать данные
      * @return список разрезов с накоплением
      */
-    public List<List<Slice>> getSingleCategorySlicesAccumulated(String tableName, int maxSlices) {
-        List<String> categoryNames = databaseService.getCategoryNames(tableName);
-        List<List<Slice>> res = new ArrayList<>();
-        for(String categoryName: categoryNames) {
-            String[] categories = {categoryName};
-            res.add(getCategorySlicesAccumulated(tableName, categories, maxSlices));
-        }
-        return res;
-    }
-
-    /**
-     * Получает разрезы данных, сгруппированных по всем сочетаниям двух категорий, делает накопление для каждого разреза,
-     * генерирует граф из каждого разреза и сохраняет граф в виде изображения .png.
-     * @param maxSlices - максимальное количество разрезов с одной комбинацией ярлыков, возвращаемое методом
-     *
-     * @param tableName - название таблицы, из которой необходимо получать данные
-     * @return список разрезов с накоплением
-     */
-    public List<List<Slice>> getDoubleCombinationsSlicesAccumulated(String tableName, int maxSlices) {
-        List<String> categoryNames = databaseService.getCategoryNames(tableName);
-        List<List<Slice>> res = new ArrayList<>();
-        for(int i = 0; i < categoryNames.size() - 1; i++) {
-            for(int j = i + 1; j < categoryNames.size(); j++) {
-                String[] categories = {categoryNames.get(i), categoryNames.get(j)};
-                res.add(getCategorySlicesAccumulated(tableName, categories, maxSlices));
+    public List<Slice> getSlicesAccumulated(String tableName, int maxCategories, int maxSlices) {
+        List<String> categoryNames = dbService.getCategoryNames(tableName);
+        List<Slice> res = new ArrayList<>();
+        CategoryCombination categoryCombos = new CategoryCombination(categoryNames);
+        for(int i = 0; i < maxCategories; i++) {
+            for(String[] categories: categoryCombos.combos) {
+                res.addAll(getCategorySlicesAccumulated(tableName, categories, maxSlices));
             }
+            categoryCombos.addCategory(categoryNames);
         }
         return res;
     }
