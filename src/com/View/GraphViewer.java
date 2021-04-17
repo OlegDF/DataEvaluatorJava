@@ -1,6 +1,7 @@
 package com.View;
 
 import com.DataObjects.Approximations.ApproximationType;
+import com.Model.CategoryCombination;
 import com.SupportClasses.Config;
 import com.DataObjects.SuspiciousInterval;
 import com.Model.DatabaseService;
@@ -12,17 +13,17 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.swing.ChartPanel;
 
 import javax.swing.*;
+import javax.swing.event.ChangeListener;
 import java.awt.*;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 /**
  * Класс, который отображает окно, способное получать и отображать графики разрезов и интервалов.
  */
 public class GraphViewer {
-
-    private final String undefinedCategory = "-";
 
     private final Config config;
     private final Logger logger;
@@ -36,15 +37,22 @@ public class GraphViewer {
     private final JPanel leftRightButtonsPanel;
 
     private final JComboBox<String> graphTypeBox;
-    private final JComboBox<String>[] categoriesBoxes;
+
     private final JSlider minIntervalMultSlider;
     private final JSlider thresholdMultSlider;
+    private final JSlider maxCategoriesSlider;
+    private final JSlider maxGraphsSlider;
+
     private final JLabel minIntervalMultNumber;
     private final JLabel thresholdMultNumber;
+    private final JLabel maxCategoriesNumber;
+    private final JLabel maxGraphsNumber;
 
     private final JLabel graphsUnavailableText;
 
-    private final int sliderWidth = 100;
+    private final int minIntervalSliderWidth = 45, thresholdSliderWidth = 59;
+    private final double minIntervalLowerLimit = 0.05, minIntervalUpperLimit = 0.5;
+    private final double thresholdLowerLimit = 0.05, thresholdUpperLimit = 3;
 
     private final JButton startCalculationButton;
     private final JButton graphLeftButton, graphRightButton;
@@ -80,16 +88,17 @@ public class GraphViewer {
 
         minIntervalMultSlider = new JSlider();
         thresholdMultSlider = new JSlider();
+        maxCategoriesSlider = new JSlider();
+        maxGraphsSlider = new JSlider();
+
         minIntervalMultNumber = new JLabel();
         thresholdMultNumber = new JLabel();
+        maxCategoriesNumber = new JLabel();
+        maxGraphsNumber = new JLabel();
 
         graphsUnavailableText = new JLabel();
 
         graphTypeBox = new JComboBox();
-        categoriesBoxes = new JComboBox[2];
-        for(int i = 0; i < categoriesBoxes.length; i++) {
-            categoriesBoxes[i] = new JComboBox<>();
-        }
         initializeInterface(tableName);
         setupWindow();
     }
@@ -100,7 +109,7 @@ public class GraphViewer {
         constraints.gridwidth = GridBagConstraints.REMAINDER;
         constraints.fill = GridBagConstraints.HORIZONTAL;
 
-        initializeCategoriesBoxes(constraints);
+        initializeGraphTypesBox(constraints);
         initializeSliders(constraints);
         initializeButtons(constraints);
         initializeGraphUnavailableText();
@@ -108,11 +117,11 @@ public class GraphViewer {
     }
 
     /**
-     * Задает размеры и расположение строк, предназначенных для выбора категорий, по которым будут получены интервалы.
+     * Задает размеры и расположение строки, предназначенной для выбора типа интервалов (уменьшение или отсутствие роста).
      *
      * @param constraints - параметры расположения элементов в окне
      */
-    private void initializeCategoriesBoxes(GridBagConstraints constraints) {
+    private void initializeGraphTypesBox(GridBagConstraints constraints) {
         graphTypeBox.addItem("уменьшение");
         graphTypeBox.addItem("отсутствие роста");
         setSize(graphTypeBox, 150, 30);
@@ -128,22 +137,6 @@ public class GraphViewer {
         graphTypePanel.add(graphTypeBox, constraints);
 
         buttonsPanel.add(graphTypePanel, constraints);
-        for(int i = 0; i < categoriesBoxes.length; i++) {
-            fillCategoriesBox(categoriesBoxes[i]);
-            setSize(categoriesBoxes[i], 150, 30);
-            categoriesBoxes[i].setAlignmentX(Component.CENTER_ALIGNMENT);
-
-            JLabel categoriesLabel = new JLabel();
-            categoriesLabel.setText("Категория " + (i + 1) + ": ");
-            setSize(categoriesLabel, 100, 30);
-
-            JPanel categoriesPanel = new JPanel();
-            setSize(categoriesPanel, 370, 30);
-            categoriesPanel.add(categoriesLabel, constraints);
-            categoriesPanel.add(categoriesBoxes[i], constraints);
-
-            buttonsPanel.add(categoriesPanel, constraints);
-        }
     }
 
     /**
@@ -152,46 +145,43 @@ public class GraphViewer {
      * @param constraints - параметры расположения элементов в окне
      */
     private void initializeSliders(GridBagConstraints constraints) {
-        minIntervalMultSlider.setMinimum(0);
-        minIntervalMultSlider.setMaximum(sliderWidth);
-        minIntervalMultSlider.setValue(sliderWidth * 10 / 100);
-        setSize(minIntervalMultSlider, 200, 30);
-        minIntervalMultSlider.addChangeListener(e -> minIntervalMultNumber.setText((double)minIntervalMultSlider.getValue() / sliderWidth + ""));
+        initializeSlider(minIntervalMultSlider, 0, minIntervalSliderWidth, 5, minIntervalMultNumber,
+                e -> minIntervalMultNumber.setText(roundNumber(getMinInterval())),
+                "Ограничение на ширину: ", constraints);
+        initializeSlider(thresholdMultSlider, 0, thresholdSliderWidth, 9, thresholdMultNumber,
+                e -> thresholdMultNumber.setText(roundNumber(getThreshold()) + " * sigma"), "Ограничение на разность величин: ", constraints);
+        initializeSlider(maxCategoriesSlider, 1, config.getMaxCategoriesPerCombo(), config.getMaxCategoriesPerCombo(), maxCategoriesNumber,
+                e -> maxCategoriesNumber.setText(maxCategoriesSlider.getValue() + ""), "Максимальное количество категорий: ", constraints);
+        initializeSlider(maxGraphsSlider, 1, 100, 16, maxGraphsNumber,
+                e -> maxGraphsNumber.setText(maxGraphsSlider.getValue() + ""), "Максимальное количество графов: ", constraints);
+    }
 
-        JLabel minIntervalMultLabel = new JLabel();
-        minIntervalMultLabel.setText("Ограничение на ширину: ");
-        setSize(minIntervalMultLabel, 250, 30);
+    private String roundNumber(double num) {
+        return new BigDecimal(num).setScale(2, RoundingMode.HALF_UP) + "";
+    }
 
-        minIntervalMultNumber.setText((double)minIntervalMultSlider.getValue() / sliderWidth + "");
-        setSize(minIntervalMultNumber, 50, 30);
+    private void initializeSlider(JSlider slider, int sliderMin, int sliderMax, int initialValue, JLabel sliderNumber,
+                                    ChangeListener listener, String labelText, GridBagConstraints constraints) {
+        slider.setMinimum(sliderMin);
+        slider.setMaximum(sliderMax);
+        setSize(slider, 200, 30);
+        slider.addChangeListener(listener);
+        slider.setValue(sliderMin);
+        slider.setValue(sliderMax);
+        slider.setValue(initialValue);
 
-        JPanel minIntervalMultPanel = new JPanel();
-        setSize(minIntervalMultPanel, 550, 30);
-        minIntervalMultPanel.add(minIntervalMultLabel, constraints);
-        minIntervalMultPanel.add(minIntervalMultSlider, constraints);
-        minIntervalMultPanel.add(minIntervalMultNumber, constraints);
+        JLabel sliderLabel = new JLabel();
+        sliderLabel.setText(labelText);
+        setSize(sliderLabel, 250, 30);
 
-        thresholdMultSlider.setMinimum(0);
-        thresholdMultSlider.setMaximum(sliderWidth);
-        thresholdMultSlider.setValue(sliderWidth * 5 / 100);
-        setSize(thresholdMultSlider, 200, 30);
-        thresholdMultSlider.addChangeListener(e -> thresholdMultNumber.setText((double)thresholdMultSlider.getValue() / sliderWidth + ""));
+        setSize(sliderNumber, 100, 30);
 
-        JLabel thresholdMultLabel = new JLabel();
-        thresholdMultLabel.setText("Ограничение на разность величин: ");
-        setSize(thresholdMultLabel, 250, 30);
-
-        thresholdMultNumber.setText((double)thresholdMultSlider.getValue() / sliderWidth + "");
-        setSize(thresholdMultNumber, 50, 30);
-
-        JPanel thresholdMultPanel = new JPanel();
-        setSize(thresholdMultPanel, 550, 30);
-        thresholdMultPanel.add(thresholdMultLabel, constraints);
-        thresholdMultPanel.add(thresholdMultSlider, constraints);
-        thresholdMultPanel.add(thresholdMultNumber, constraints);
-
-        buttonsPanel.add(minIntervalMultPanel, constraints);
-        buttonsPanel.add(thresholdMultPanel, constraints);
+        JPanel sliderPanel = new JPanel();
+        setSize(sliderPanel, 600, 30);
+        sliderPanel.add(sliderLabel, constraints);
+        sliderPanel.add(slider, constraints);
+        sliderPanel.add(sliderNumber, constraints);
+        buttonsPanel.add(sliderPanel, constraints);
     }
 
     /**
@@ -251,21 +241,6 @@ public class GraphViewer {
     }
 
     /**
-     * Настраивает одно из меню, с помощью которых выбираются категории, и наполняет их списком категорий из
-     * соответствующей таблицы (а также дополнительной строкой, обозначающей отсутствие категории).
-     *
-     * @param categoriesBox - меню, которое необходимо настроить
-     */
-    private void fillCategoriesBox(JComboBox categoriesBox) {
-        List<String> categoryNames = dbService.getCategoryNames(tableName);
-        categoriesBox.removeAllItems();
-        categoriesBox.addItem(undefinedCategory);
-        for(String category: categoryNames) {
-            categoriesBox.addItem(category);
-        }
-    }
-
-    /**
      * Настраивает и отображает окно.
      */
     private void setupWindow() {
@@ -282,36 +257,34 @@ public class GraphViewer {
      * отображает наиболее значимый из них на графике.
      */
     private void getIntervals() {
-        List<String> categories = new ArrayList<>();
-        for(int i = 0; i < categoriesBoxes.length; i++) {
-            String newCategory = (String)categoriesBoxes[i].getSelectedItem();
-            if(!newCategory.equals(undefinedCategory)) {
-                categories.add(newCategory);
+        List<String> categoryNames = dbService.getCategoryNames(tableName);
+        CategoryCombination categoryCombos = new CategoryCombination(categoryNames);
+        List<String[]> categoryCombosFinal = new ArrayList<>();
+        for(int i = 1; i <= maxCategoriesSlider.getValue(); i++) {
+            categoryCombosFinal.addAll(categoryCombos.combos);
+            if(i < maxCategoriesSlider.getValue()) {
+                categoryCombos.addCategory(categoryNames);
             }
         }
-        String[] colNames = categories.toArray(new String[0]);
-        if(categories.size() > 0) {
-            switch(graphTypeBox.getSelectedIndex()) {
-                case 0:
-                    logger.logMessage("Начинается получение графиков уменьшения...");
-                    decreaseIntervals = dbService.getDecreases(tableName, colNames, approximationType,
-                            (double)minIntervalMultSlider.getValue() / sliderWidth,
-                            (double)thresholdMultSlider.getValue() / sliderWidth);
-                    logger.logMessage("Закончено получение графиков уменьшения.");
-                    break;
-                case 1:
-                    logger.logMessage("Начинается получение графиков отсутствия роста...");
-                    decreaseIntervals = dbService.getConstants(tableName, colNames, approximationType,
-                            (double)minIntervalMultSlider.getValue() / sliderWidth,
-                            (double)thresholdMultSlider.getValue() / sliderWidth);
-                    logger.logMessage("Закончено получение графиков отсутствия роста.");
-                    break;
-            }
-            intervalFinder.removeIntersectingIntervals(decreaseIntervals);
-            currentGraphs = new ArrayList<>();
-        } else {
-            return;
+        switch(graphTypeBox.getSelectedIndex()) {
+            case 0:
+                logger.logMessage("Начинается получение графиков уменьшения...");
+                decreaseIntervals = dbService.getDecreases(tableName, categoryCombosFinal, approximationType,
+                        getMinInterval(), getThreshold());
+                logger.logMessage("Закончено получение графиков уменьшения.");
+                break;
+            case 1:
+                logger.logMessage("Начинается получение графиков отсутствия роста...");
+                decreaseIntervals = dbService.getConstants(tableName, categoryCombosFinal, approximationType,
+                        getMinInterval(), getThreshold());
+                logger.logMessage("Закончено получение графиков отсутствия роста.");
+                break;
         }
+        intervalFinder.removeIntersectingIntervals(decreaseIntervals);
+        if(decreaseIntervals.size() > maxGraphsSlider.getValue()) {
+            decreaseIntervals = decreaseIntervals.subList(0, maxGraphsSlider.getValue());
+        }
+        currentGraphs = new ArrayList<>();
         currentInterval = 0;
         if(decreaseIntervals.size() > 0) {
             currentGraphs.add(graphExporter.getDecreaseChart(decreaseIntervals.get(0)));
@@ -371,6 +344,26 @@ public class GraphViewer {
             currentInterval++;
             drawGraph();
         }
+    }
+
+    /**
+     * Получает из позиции соответствующего ползунка значение множителя минимальной ширины интервалов.
+     *
+     * @return минимальная ширина интервалов
+     */
+    private double getMinInterval() {
+        return minIntervalLowerLimit + (double)minIntervalMultSlider.getValue() / minIntervalSliderWidth *
+                (minIntervalUpperLimit - minIntervalLowerLimit);
+    }
+
+    /**
+     * Получает из позиции соответствующего ползунка значение множителя разности величин интервалов.
+     *
+     * @return разность величин интервалов
+     */
+    private double getThreshold() {
+        return thresholdLowerLimit + (double)thresholdMultSlider.getValue() / thresholdSliderWidth * (
+                thresholdUpperLimit - thresholdLowerLimit);
     }
 
     private void setSize(Component component, int x, int y) {

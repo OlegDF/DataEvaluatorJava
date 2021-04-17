@@ -15,12 +15,12 @@ import java.util.List;
  */
 public class SliceRetriever {
 
-    private final DatabaseService databaseService;
+    private final DatabaseService dbService;
     private final Logger logger;
     private final ApproximationType approximationType;
 
-    public SliceRetriever(DatabaseService databaseService, ApproximationType approximationType) {
-        this.databaseService = databaseService;
+    public SliceRetriever(DatabaseService dbService, ApproximationType approximationType) {
+        this.dbService = dbService;
         this.approximationType = approximationType;
         logger = new ConsoleLogger();
     }
@@ -37,9 +37,9 @@ public class SliceRetriever {
     public List<Slice> getCategorySlices(String tableName, String[] categories, int maxSlices) {
         logger.logMessage("Начинается получение разрезов по категориям " + Arrays.toString(categories) + "...");
         List<Slice> res = new ArrayList<>();
-        List<String[]> labelCombinations = databaseService.getLabelCombinations(tableName, categories, maxSlices);
+        List<String[]> labelCombinations = dbService.getLabelCombinations(tableName, categories, maxSlices);
         for(String[] combination: labelCombinations) {
-            res.add(databaseService.getSlice(tableName, categories, combination, approximationType));
+            res.add(dbService.getSlice(tableName, categories, combination, approximationType));
         }
         res.sort(Comparator.comparingLong(o -> -o.totalAmount));
         logger.logMessage("Закончилось получение разрезов по категории " + Arrays.toString(categories) + ", получено " + res.size() + " разрезов.");
@@ -74,56 +74,16 @@ public class SliceRetriever {
      * @return список разрезов с накоплением
      */
     public List<Slice> getSlicesAccumulated(String tableName, int maxCategories, int maxSlices) {
-        List<String> categoryNames = databaseService.getCategoryNames(tableName);
+        List<String> categoryNames = dbService.getCategoryNames(tableName);
         List<Slice> res = new ArrayList<>();
-        List<String[]> categoryCombos = getInitialCategories(categoryNames);
+        CategoryCombination categoryCombos = new CategoryCombination(categoryNames);
         for(int i = 0; i < maxCategories; i++) {
-            for(String[] categories: categoryCombos) {
+            for(String[] categories: categoryCombos.combos) {
                 res.addAll(getCategorySlicesAccumulated(tableName, categories, maxSlices));
             }
-            categoryCombos = addCategory(categoryCombos, categoryNames);
+            categoryCombos.addCategory(categoryNames);
         }
         return res;
-    }
-
-    /**
-     * Получает список массивов, каждый из которых содержит название одной из категорий.
-     *
-     * @param categoryNames - список категорий
-     * @return список массивов, по 1 на категорию
-     */
-    private List<String[]> getInitialCategories(List<String> categoryNames) {
-        List<String[]> newCombos = new ArrayList<>();
-        for(String categoryName: categoryNames) {
-            String[] newCombo = {categoryName};
-            newCombos.add(newCombo);
-        }
-        return newCombos;
-    }
-
-    /**
-     * Добавляет в каждый из полученных списков категорий 1 новую категорию (категории внутри списка сортируются в
-     * алфавитном порядке, чтобы избежать повторений); получает список всех комбинаций старых категорий с новой,
-     * удовлетворяющих этому условию.
-     *
-     * @param currentCombos - имеющиеся сочетания категорий
-     * @param categoryNames - список категорий
-     * @return сочетания категорий, в каждом из которых на 1 категорию больше, чем во входных сочетаниях
-     */
-    private List<String[]> addCategory(List<String[]> currentCombos, List<String> categoryNames) {
-        List<String[]> newCombos = new ArrayList<>();
-        for(String[] combo: currentCombos) {
-            for(String categoryName: categoryNames) {
-                if(categoryName.compareTo(combo[combo.length - 1]) <= 0) {
-                    continue;
-                }
-                String[] newCombo = new String[combo.length + 1];
-                System.arraycopy(combo, 0, newCombo, 0, combo.length);
-                newCombo[newCombo.length - 1] = categoryName;
-                newCombos.add(newCombo);
-            }
-        }
-        return newCombos;
     }
 
 }

@@ -15,11 +15,11 @@ import java.util.regex.Pattern;
  */
 public class DataRetriever {
 
-    private final DatabaseService databaseService;
+    private final DatabaseService dbService;
     private final Logger logger;
 
-    public DataRetriever(DatabaseService databaseService) {
-        this.databaseService = databaseService;
+    public DataRetriever(DatabaseService dbService) {
+        this.dbService = dbService;
         logger = new ConsoleLogger();
     }
 
@@ -39,7 +39,7 @@ public class DataRetriever {
             String[] row = rowLine.split(";", -1);
             String[] colTypes = getColTypes(row);
 
-            databaseService.createTable(tableName, colNames, colTypes);
+            dbService.createTable(tableName, colNames, colTypes);
 
             int rowsExported = 0;
             List<String[]> rows = new ArrayList<>();
@@ -49,12 +49,12 @@ public class DataRetriever {
                 rowLine = lineReader.readLine();
                 rowsExported++;
                 if(rowsExported % 1000 == 0) {
-                    databaseService.insertData(tableName, colNames, colTypes, rows);
+                    dbService.insertData(tableName, colNames, colTypes, rows);
                     rows = new ArrayList<>();
                     logger.logMessage("Экспортировано " + rowsExported + " строк");
                 }
             }
-            databaseService.insertData(tableName, colNames, colTypes, rows);
+            dbService.insertData(tableName, colNames, colTypes, rows);
             logger.logMessage("Экспортировано " + rowsExported + " строк");
             logger.logMessage("Закончен экспорт файла " + tableName + ".csv в таблицу.");
         } catch (IOException ex) {

@@ -3,6 +3,9 @@ package com.DataObjects.Approximations;
 import com.DataObjects.Slice;
 import com.DataObjects.SlicePoint;
 
+/**
+ * Функция приближения среза, вычисляемая методом наименьших квадратов как линейная функция от времени.
+ */
 public class LinearRegression implements Approximation {
 
     private double approximationAngle, approximationOffset;

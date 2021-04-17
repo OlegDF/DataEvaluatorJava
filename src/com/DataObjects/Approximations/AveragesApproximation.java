@@ -2,6 +2,10 @@ package com.DataObjects.Approximations;
 
 import com.DataObjects.Slice;
 
+/**
+ * Функция приближения среза, на которой значение в точке i равно среднему значению всех точек от i-k до i+k
+ * (k - ширина интервала усреднения)
+ */
 public class AveragesApproximation implements Approximation {
 
     private long[] approximateValues;
