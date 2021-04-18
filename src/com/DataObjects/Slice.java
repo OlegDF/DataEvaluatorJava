@@ -65,7 +65,7 @@ public class Slice {
                 this.approximation = new EmptyApproximation();
                 break;
             case LINEAR:
-                this.approximation = new LinearRegression(this);
+                this.approximation = new LinearRegression(this, 0, points.length - 1);
                 break;
             case AVERAGES:
                 this.approximation = new AveragesApproximation(this);
@@ -171,10 +171,10 @@ public class Slice {
     }
 
     /**
-     * Получает значение функции линейной регрессии в определенной точке во времени.
+     * Получает значение функции приближения в определенной точке во времени.
      *
      * @param pos - номер точки среза
-     * @return значение регрессии
+     * @return значение приближения
      */
     public long getApproximate(int pos) {
         return approximation.getApproximate(this, pos);

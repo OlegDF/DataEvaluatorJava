@@ -93,7 +93,7 @@ public class SimpleIntervalFinder implements IntervalFinder {
                 }
             }
         }
-        res.sort(Comparator.comparing(SuspiciousInterval::getRelativeWidth).reversed());
+        res.sort(Comparator.comparing(SuspiciousInterval::getFlatnessScore).reversed());
         if(removeIntersections) {
             removeIntersectingIntervals(res);
         }
