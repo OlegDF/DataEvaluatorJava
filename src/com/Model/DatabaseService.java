@@ -350,7 +350,7 @@ public class DatabaseService {
                     query.append(", ");
                 }
             }
-            query.append(", pos1, pos2, relative_width, relative_value_range");
+            query.append(", pos1, pos2, flatness_score, relative_width, relative_value_range");
             query.append(") VALUES (");
             for(int k = 0; k < intervals.size(); k++) {
                 SuspiciousInterval interval = intervals.get(k);
@@ -380,6 +380,7 @@ public class DatabaseService {
                 }
                 query.append(", ").append(interval.pos1);
                 query.append(", ").append(interval.pos2);
+                query.append(", ").append(interval.getFlatnessScore());
                 query.append(", ").append(interval.getRelativeWidth());
                 query.append(", ").append(interval.getRelativeValueRange() / interval.slice.getRelativeSigma());
                 if(k < intervals.size() - 1) {

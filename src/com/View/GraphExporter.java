@@ -172,6 +172,7 @@ public class GraphExporter {
         }
         JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, "Date", "Value", dataset);
         XYPlot plot = (XYPlot) chart.getPlot();
+        plot.getRangeAxis().setAutoRangeMinimumSize(slice.valueRange);
         plot.getRenderer().setSeriesPaint(0, new Color(0, 0, 192));
         plot.getRenderer().setSeriesPaint(1, new Color(255, 0, 0));
         plot.getRenderer().setSeriesPaint(2, new Color(0, 0, 192));

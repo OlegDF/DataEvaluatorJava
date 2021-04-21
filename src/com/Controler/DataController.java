@@ -199,16 +199,18 @@ public class DataController {
      */
     public void createConstantsTable() {
         List<String> categoryNames = dbService.getCategoryNames(tableName);
-        final String[] colNames = new String[categoryNames.size() + 4];
-        final String[] colTypes = new String[categoryNames.size() + 4];
+        final String[] colNames = new String[categoryNames.size() + 5];
+        final String[] colTypes = new String[categoryNames.size() + 5];
         for(int i = 0; i < categoryNames.size(); i++) {
             colNames[i] = categoryNames.get(i);
             colTypes[i] = "varchar(255)";
         }
-        colNames[colNames.length - 4] = "pos1";
+        colNames[colNames.length - 5] = "pos1";
+        colTypes[colNames.length - 5] = "int8";
+        colNames[colNames.length - 4] = "pos2";
         colTypes[colNames.length - 4] = "int8";
-        colNames[colNames.length - 3] = "pos2";
-        colTypes[colNames.length - 3] = "int8";
+        colNames[colNames.length - 3] = "flatness_score";
+        colTypes[colNames.length - 3] = "float";
         colNames[colNames.length - 2] = "relative_width";
         colTypes[colNames.length - 2] = "float";
         colNames[colNames.length - 1] = "relative_value_range";
