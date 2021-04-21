@@ -67,6 +67,9 @@ public class SuspiciousInterval {
                 double diffWithExpectation = (slice.points[pos2].value - partialApproximation.getApproximate(slice, pos2));
                 if(-diffWithExpectation > partialApproximation.getSigma()) {
                     res *= (Math.abs(diffWithExpectation) / partialApproximation.getSigma());
+                } else if(diffWithExpectation > 0) {
+                    res /= ((1 + diffWithExpectation) / partialApproximation.getSigma());
+                    res /= 2;
                 }
                 double diffAtTheEnd = (slice.getApproximate(slice.points.length - 1) -
                         partialApproximation.getApproximate(slice, slice.points.length - 1));
@@ -74,6 +77,7 @@ public class SuspiciousInterval {
                     res *= (Math.abs(diffAtTheEnd) / partialApproximation.getSigma());
                 } else if(diffAtTheEnd > 0) {
                     res /= ((1 + diffAtTheEnd) / partialApproximation.getSigma());
+                    res /= 2;
                 }
             }
         }

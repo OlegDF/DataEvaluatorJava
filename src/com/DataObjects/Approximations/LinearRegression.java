@@ -55,7 +55,7 @@ public class LinearRegression implements Approximation {
     }
 
     /**
-     * Получает линейную регрессию данных на срезе в виде y = approximationAngle + approximationOffset.
+     * Получает среднеквадратичное отклонение среза на основе полученной регрессии.
      *
      * @param slice - срез, на котором находится регрессия
      * @param start - индекс первой точки регрессии

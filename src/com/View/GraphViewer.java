@@ -153,7 +153,7 @@ public class GraphViewer {
         initializeSlider(maxCategoriesSlider, 1, config.getMaxCategoriesPerCombo(), config.getMaxCategoriesPerCombo(), maxCategoriesNumber,
                 e -> maxCategoriesNumber.setText(maxCategoriesSlider.getValue() + ""), "Максимальное количество категорий: ", constraints);
         initializeSlider(maxGraphsSlider, 1, 100, 16, maxGraphsNumber,
-                e -> maxGraphsNumber.setText(maxGraphsSlider.getValue() + ""), "Максимальное количество графов: ", constraints);
+                e -> maxGraphsNumber.setText(maxGraphsSlider.getValue() + ""), "Максимальное количество графиков: ", constraints);
     }
 
     private String roundNumber(double num) {
@@ -190,8 +190,8 @@ public class GraphViewer {
      * @param constraints - параметры расположения элементов в окне
      */
     private void initializeButtons(GridBagConstraints constraints) {
-        startCalculationButton.setText("Получить графы");
-        setSize(startCalculationButton, 100, 30);
+        startCalculationButton.setText("Получить графики");
+        setSize(startCalculationButton, 200, 30);
         startCalculationButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         startCalculationButton.addActionListener(e -> getIntervals());
         buttonsPanel.add(startCalculationButton, constraints);
