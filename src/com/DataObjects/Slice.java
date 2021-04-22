@@ -194,6 +194,15 @@ public class Slice {
     }
 
     /**
+     * Получает множитель наклона приближения.
+     *
+     * @return множитель наклона
+     */
+    public double getApproximationAngle() {
+        return approximation.getAngleMultiplier(this);
+    }
+
+    /**
      * Получает разность между максимальным и минимальным значениями на разрезе.
      *
      * @return значение разности

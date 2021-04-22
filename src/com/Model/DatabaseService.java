@@ -229,6 +229,34 @@ public class DatabaseService {
     }
 
     /**
+     * Получает список названий таблиц с исходными данными.
+     *
+     * @return список столбцов в строковом виде
+     */
+    public List<String> getTableNames() {
+        String query = "";
+        try {
+            query = "SELECT table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE' " +
+                    "AND table_schema NOT IN ('pg_catalog', 'information_schema') ORDER BY table_name;";
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query);
+            res.last();
+            List<String> tableNames = new ArrayList<>();
+            res.beforeFirst();
+            while(res.next()) {
+                String tableName = res.getString("table_name");
+                if(!tableName.endsWith("_decreases") && !tableName.endsWith("_constants")) {
+                    tableNames.add(tableName);
+                }
+            }
+            return tableNames;
+        } catch (SQLException ex) {
+            logger.logError("Не удалось получить список столбцов по запросу: " + query);
+            handleSQLException(ex);
+        }
+        return new ArrayList<>();
+    }
+
+    /**
      * Вставляет в таблицу интервалов с уменьшениями новые строки с указанными значениями данных.
      *
      * @param tableName - название таблицы

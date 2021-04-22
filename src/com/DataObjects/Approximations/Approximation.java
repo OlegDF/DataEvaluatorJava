@@ -29,4 +29,11 @@ public interface Approximation {
      */
     ApproximationType getType();
 
+    /**
+     * Получает множитель наклона функции (чем он выше, тем больше наклон, знак означает направление наклона)
+     *
+     * @return множитель наклона
+     */
+    double getAngleMultiplier(Slice slice);
+
 }

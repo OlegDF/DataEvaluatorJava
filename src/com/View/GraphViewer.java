@@ -15,6 +15,10 @@ import org.jfree.chart.swing.ChartPanel;
 import javax.swing.*;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -36,6 +40,7 @@ public class GraphViewer {
     private final JPanel graphPanel;
     private final JPanel leftRightButtonsPanel;
 
+    private final JComboBox<String> tableBox;
     private final JComboBox<String> graphTypeBox;
 
     private final JSlider minIntervalMultSlider;
@@ -98,7 +103,8 @@ public class GraphViewer {
 
         graphsUnavailableText = new JLabel();
 
-        graphTypeBox = new JComboBox();
+        graphTypeBox = new JComboBox<>();
+        tableBox = new JComboBox<>();
         initializeInterface(tableName);
         setupWindow();
     }
@@ -122,6 +128,26 @@ public class GraphViewer {
      * @param constraints - параметры расположения элементов в окне
      */
     private void initializeGraphTypesBox(GridBagConstraints constraints) {
+        List<String> tableNames = dbService.getTableNames();
+        for(String table : tableNames) {
+            tableBox.addItem(table);
+            if(table.equals(tableName)) {
+                tableBox.setSelectedItem(table);
+            }
+        }
+        setSize(tableBox, 150, 30);
+        tableBox.setAlignmentX(Component.CENTER_ALIGNMENT);
+        tableBox.addItemListener(e -> {tableName = (String)tableBox.getSelectedItem();});
+
+        JLabel tableLabel = new JLabel();
+        tableLabel.setText("Название таблицы: ");
+        setSize(tableLabel, 150, 30);
+
+        JPanel tablePanel = new JPanel();
+        setSize(tablePanel, 420, 30);
+        tablePanel.add(tableLabel, constraints);
+        tablePanel.add(tableBox, constraints);
+
         graphTypeBox.addItem("уменьшение");
         graphTypeBox.addItem("отсутствие роста");
         setSize(graphTypeBox, 150, 30);
@@ -129,13 +155,14 @@ public class GraphViewer {
 
         JLabel graphTypeLabel = new JLabel();
         graphTypeLabel.setText("Тип графиков: ");
-        setSize(graphTypeLabel, 100, 30);
+        setSize(graphTypeLabel, 150, 30);
 
         JPanel graphTypePanel = new JPanel();
-        setSize(graphTypePanel, 370, 30);
+        setSize(graphTypePanel, 420, 30);
         graphTypePanel.add(graphTypeLabel, constraints);
         graphTypePanel.add(graphTypeBox, constraints);
 
+        buttonsPanel.add(tablePanel, constraints);
         buttonsPanel.add(graphTypePanel, constraints);
     }
 
@@ -232,7 +259,7 @@ public class GraphViewer {
      * Создает составные части окна, одна из которых содержит кнопки с параметрами интервалов, а другая - собственно граф.
      */
     private void initializePanels() {
-        setSize(buttonsPanel, 600, 200);
+        setSize(buttonsPanel, 600, 250);
         setSize(graphPanel, 600, 480);
         buttonsPanel.setLayout(new BoxLayout(buttonsPanel, BoxLayout.Y_AXIS));
 
@@ -245,7 +272,7 @@ public class GraphViewer {
      */
     private void setupWindow() {
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        mainFrame.setSize(650, 700);
+        mainFrame.setSize(650, 750);
         mainFrame.setTitle("Графики интервалов");
         mainFrame.setLayout(new BoxLayout(mainFrame.getContentPane(), BoxLayout.Y_AXIS));
         mainFrame.setVisible(true);

@@ -31,12 +31,13 @@ public class SuspiciousInterval {
         if(pos1 < 0 || pos1 >= slice.points.length || pos2 < 0 || pos2 >= slice.points.length) {
             return -1;
         }
-        double res = getRelativeDiff() * getRelativeDiff() / (getRelativeWidth());
+        double res = getRelativeDiff() * getRelativeDiff() / (getRelativeWidth() * getRelativeWidth());
         double relativeSigma = slice.getSigma() / slice.valueRange;
         if(relativeSigma != 0) {
             res /= relativeSigma;
         }
         res = getComparisonToApproximation(res);
+        res = compareApproximations(res);
         return res;
     }
 
@@ -50,6 +51,7 @@ public class SuspiciousInterval {
     public double getFlatnessScore() {
         double res = getRelativeWidth();
         res = getComparisonToApproximation(res);
+        res = compareApproximations(res);
         return res;
     }
 
@@ -65,20 +67,44 @@ public class SuspiciousInterval {
         if(partialApproximation != null) {
             if(partialApproximation.getSigma() != 0) {
                 double diffWithExpectation = (slice.points[pos2].value - partialApproximation.getApproximate(slice, pos2));
-                if(-diffWithExpectation > partialApproximation.getSigma()) {
+                if(-diffWithExpectation >= partialApproximation.getSigma()) {
                     res *= (Math.abs(diffWithExpectation) / partialApproximation.getSigma());
-                } else if(diffWithExpectation > 0) {
-                    res /= ((1 + diffWithExpectation) / partialApproximation.getSigma());
-                    res /= 2;
+                } else {
+                    res /= ((diffWithExpectation / partialApproximation.getSigma()) + 1);
+                    res /= 10;
                 }
                 double diffAtTheEnd = (slice.getApproximate(slice.points.length - 1) -
                         partialApproximation.getApproximate(slice, slice.points.length - 1));
-                if(-diffAtTheEnd > partialApproximation.getSigma()) {
+                if(-diffAtTheEnd >= partialApproximation.getSigma()) {
                     res *= (Math.abs(diffAtTheEnd) / partialApproximation.getSigma());
-                } else if(diffAtTheEnd > 0) {
-                    res /= ((1 + diffAtTheEnd) / partialApproximation.getSigma());
-                    res /= 2;
+                } else {
+                    res /= ((diffAtTheEnd / partialApproximation.getSigma()) + 1);
+                    res /= 10;
                 }
+            }
+        }
+        return res;
+    }
+    /**
+     * Вычисляет коэффициент и умножает на него меру значимости. Коэффициент увеличивается, если частичное приближение
+     * имеет значительный наклон вверх или полное приближение имеет значительный наклон вниз, в противном случае он уменьшается.
+     *
+     * @param res - мера значимости
+     * @return новая мера значимости
+     */
+    private double compareApproximations(double res) {
+        if(partialApproximation != null) {
+            double approximationAngle = slice.getApproximationAngle();
+            double partialApproximationAngle = partialApproximation.getAngleMultiplier(slice);
+            if(approximationAngle > 0) {
+                res /= (approximationAngle * 100 + 1);
+            } else if(approximationAngle < 0) {
+                res *= (-approximationAngle * 100 + 1) * (-approximationAngle * 100 + 1);
+            }
+            if(partialApproximationAngle > 0) {
+                res *= (partialApproximationAngle * 100 + 1) * (partialApproximationAngle * 100 + 1);
+            } else if(partialApproximationAngle < 0) {
+                res /= (-partialApproximationAngle * 100 + 1);
             }
         }
         return res;

@@ -37,7 +37,7 @@ public class DataRetriever {
             String[] colNames = lineReader.readLine().split(";", -1);
             String rowLine = lineReader.readLine();
             String[] row = rowLine.split(";", -1);
-            String[] colTypes = getColTypes(row);
+            String[] colTypes = getColTypes(colNames, row);
 
             dbService.createTable(tableName, colNames, colTypes);
 
@@ -48,7 +48,7 @@ public class DataRetriever {
                 rows.add(row);
                 rowLine = lineReader.readLine();
                 rowsExported++;
-                if(rowsExported % 1000 == 0) {
+                if(rowsExported % 10 == 0) {
                     dbService.insertData(tableName, colNames, colTypes, rows);
                     rows = new ArrayList<>();
                     logger.logMessage("Экспортировано " + rowsExported + " строк");
@@ -70,7 +70,7 @@ public class DataRetriever {
      * @param firstRow - первая строка, содержащая данные для вставки в таблицу
      * @return список названий типов данных
      */
-    private String[] getColTypes(String[] firstRow) {
+    private String[] getColTypes(String[] colNames, String[] firstRow) {
         String[] colTypes = new String[firstRow.length];
 
         final Pattern intPattern = Pattern.compile("-?\\d+");
@@ -85,6 +85,9 @@ public class DataRetriever {
             } else if(timestampPattern.matcher(firstRow[i]).matches()) {
                 colTypes[i] = "timestamptz";
             } else {
+                colTypes[i] = "varchar(255)";
+            }
+            if(colNames[i].startsWith("category") || colNames[i].startsWith("version")) {
                 colTypes[i] = "varchar(255)";
             }
         }

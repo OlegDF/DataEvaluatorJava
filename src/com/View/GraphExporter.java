@@ -7,6 +7,7 @@ import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.data.Range;
 import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
@@ -172,22 +173,20 @@ public class GraphExporter {
         }
         JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, "Date", "Value", dataset);
         XYPlot plot = (XYPlot) chart.getPlot();
-        plot.getRangeAxis().setAutoRangeMinimumSize(slice.valueRange);
+        plot.getRangeAxis().setRange(plot.getRangeAxis().getRange().getLowerBound(), plot.getRangeAxis().getRange().getLowerBound() + slice.valueRange * 1.5);
         plot.getRenderer().setSeriesPaint(0, new Color(0, 0, 192));
         plot.getRenderer().setSeriesPaint(1, new Color(255, 0, 0));
         plot.getRenderer().setSeriesPaint(2, new Color(0, 0, 192));
-        plot.getRenderer().setSeriesPaint(3, new Color(128, 255, 192));
-        plot.getRenderer().setSeriesPaint(4, new Color(128, 255, 192));
+        plot.getRenderer().setSeriesPaint(3, new Color(64, 192, 192));
+        plot.getRenderer().setSeriesPaint(4, new Color(64, 192, 192));
         if(interval.hasPartialApproximation()) {
-            plot.getRenderer().setSeriesPaint(5, new Color(255, 32, 255));
-            plot.getRenderer().setSeriesPaint(6, new Color(255, 32, 255));
+            plot.getRenderer().setSeriesPaint(5, new Color(32, 192, 64));
+            plot.getRenderer().setSeriesPaint(6, new Color(32, 192, 64));
         }
         plot.getRenderer().setSeriesVisibleInLegend(2, Boolean.FALSE, true);
         plot.getRenderer().setSeriesVisibleInLegend(3, Boolean.FALSE, true);
-        plot.getRenderer().setSeriesVisibleInLegend(4, Boolean.FALSE, true);
         if(interval.hasPartialApproximation()) {
             plot.getRenderer().setSeriesVisibleInLegend(5, Boolean.FALSE, true);
-            plot.getRenderer().setSeriesVisibleInLegend(6, Boolean.FALSE, true);
         }
         return chart;
     }
@@ -199,8 +198,8 @@ public class GraphExporter {
      * @param dataset - набор данных, в который вставляются линии
      */
     private void addApproximation(Slice slice, TimeSeriesCollection dataset) {
-        TimeSeries approximationLower = new TimeSeries("Нижняя граница");
-        TimeSeries approximationUpper = new TimeSeries("Верхняя граница");
+        TimeSeries approximationLower = new TimeSeries("Приближение");
+        TimeSeries approximationUpper = new TimeSeries("Приближение");
         for(int i = 0; i < slice.points.length; i++) {
             approximationLower.add(new TimeSeriesDataItem(new Millisecond(slice.points[i].date),
                     slice.getApproximate(i) - slice.getSigma()));
@@ -219,8 +218,8 @@ public class GraphExporter {
      * @param dataset - набор данных, в который вставляются линии
      */
     private void addPartialApproximation(SuspiciousInterval interval, TimeSeriesCollection dataset) {
-        TimeSeries approximationLower = new TimeSeries("Нижняя граница");
-        TimeSeries approximationUpper = new TimeSeries("Верхняя граница");
+        TimeSeries approximationLower = new TimeSeries("Частичное приближение");
+        TimeSeries approximationUpper = new TimeSeries("Частичное приближение");
         for(int i = 0; i < interval.slice.points.length; i++) {
             approximationLower.add(new TimeSeriesDataItem(new Millisecond(interval.slice.points[i].date),
                     interval.getPartialApproximate(i) - interval.getPartialSigma()));
