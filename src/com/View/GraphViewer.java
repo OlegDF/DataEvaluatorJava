@@ -15,10 +15,6 @@ import org.jfree.chart.swing.ChartPanel;
 import javax.swing.*;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -28,6 +24,9 @@ import java.util.List;
  * Класс, который отображает окно, способное получать и отображать графики разрезов и интервалов.
  */
 public class GraphViewer {
+
+    private String labelAbsent = "-";
+    private final boolean simpleMode;
 
     private final Config config;
     private final Logger logger;
@@ -42,6 +41,9 @@ public class GraphViewer {
 
     private final JComboBox<String> tableBox;
     private final JComboBox<String> graphTypeBox;
+
+    private final JComboBox<String>[] colNameBoxes;
+    private final JComboBox<String>[] labelBoxes;
 
     private final JSlider minIntervalMultSlider;
     private final JSlider thresholdMultSlider;
@@ -76,6 +78,7 @@ public class GraphViewer {
         config = new Config();
         logger = new ConsoleLogger();
         tableName = config.getTableName();
+        simpleMode = config.getViewerType();
         approximationType = config.getApproximationType();
         dbService = new DatabaseService(config.getDbName(), config.getUserName(), config.getPassword());
         intervalFinder = new SimpleIntervalFinder();
@@ -90,6 +93,13 @@ public class GraphViewer {
         graphLeftButton = new JButton();
         graphRightButton = new JButton();
         currentGraphNumber = new JLabel();
+
+        colNameBoxes = new JComboBox[config.getMaxCategoriesPerCombo()];
+        labelBoxes = new JComboBox[config.getMaxCategoriesPerCombo()];
+        for(int i = 0; i < colNameBoxes.length; i++) {
+            colNameBoxes[i] = new JComboBox<>();
+            labelBoxes[i] = new JComboBox<>();
+        }
 
         minIntervalMultSlider = new JSlider();
         thresholdMultSlider = new JSlider();
@@ -116,6 +126,7 @@ public class GraphViewer {
         constraints.fill = GridBagConstraints.HORIZONTAL;
 
         initializeGraphTypesBox(constraints);
+        initializeCategoryBoxes(constraints);
         initializeSliders(constraints);
         initializeButtons(constraints);
         initializeGraphUnavailableText();
@@ -137,8 +148,12 @@ public class GraphViewer {
         }
         setSize(tableBox, 150, 30);
         tableBox.setAlignmentX(Component.CENTER_ALIGNMENT);
-        tableBox.addItemListener(e -> {tableName = (String)tableBox.getSelectedItem();});
-
+        tableBox.addItemListener(e -> {
+            tableName = (String)tableBox.getSelectedItem();
+            if(simpleMode) {
+                fillCategoryBoxes();
+            }
+        });
         JLabel tableLabel = new JLabel();
         tableLabel.setText("Название таблицы: ");
         setSize(tableLabel, 150, 30);
@@ -167,6 +182,75 @@ public class GraphViewer {
     }
 
     /**
+     * Задает размеры и расположение строк, предназначенных для выбора категорий и значений в режиме выбора одного среза.
+     *
+     * @param constraints - параметры расположения элементов в окне
+     */
+    private void initializeCategoryBoxes(GridBagConstraints constraints) {
+        for(int i = 0; i < colNameBoxes.length; i++) {
+            setSize(colNameBoxes[i], 150, 30);
+            colNameBoxes[i].setAlignmentX(Component.CENTER_ALIGNMENT);
+            setSize(labelBoxes[i], 150, 30);
+            labelBoxes[i].setAlignmentX(Component.CENTER_ALIGNMENT);
+
+            JLabel colNameLabel = new JLabel();
+            colNameLabel.setText("Категория " + (i + 1) + ":");
+            setSize(colNameLabel, 150, 30);
+
+            JPanel colNamePanel = new JPanel();
+            setSize(colNamePanel, 600, 30);
+            colNamePanel.add(colNameLabel, constraints);
+            colNamePanel.add(colNameBoxes[i], constraints);
+            colNamePanel.add(labelBoxes[i], constraints);
+
+            if(simpleMode) {
+                buttonsPanel.add(colNamePanel, constraints);
+            }
+        }
+        fillCategoryBoxes();
+    }
+
+    /**
+     * Заполняет списки категорий для текущей строки.
+     */
+    private void fillCategoryBoxes() {
+        List<String> categoryNames = dbService.getCategoryNames(tableName);
+        for(int i = 0; i < colNameBoxes.length; i++) {
+            colNameBoxes[i].removeAllItems();
+            labelBoxes[i].removeAllItems();
+            colNameBoxes[i].addItem(labelAbsent);
+            labelBoxes[i].addItem(labelAbsent);
+            for(String category: categoryNames) {
+                colNameBoxes[i].addItem(category);
+            }
+            colNameBoxes[i].setSelectedIndex(0);
+            final int iFixed = i;
+            colNameBoxes[iFixed].addItemListener(e -> {
+                String colName = (String)colNameBoxes[iFixed].getSelectedItem();
+                if(colName != null) {
+                    if(!colName.equals(labelAbsent)) {
+                        fillLabelBox(iFixed);
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * Заполняет список значений определенной категории.
+     *
+     * @param i - список категорий
+     */
+    private void fillLabelBox(int i) {
+        labelBoxes[i].removeAllItems();
+        labelBoxes[i].addItem(labelAbsent);
+        List<String> labelsList = dbService.getLabelList(tableName, (String)colNameBoxes[i].getSelectedItem(), config.getMaxSlicesPerCombo());
+        for(String label: labelsList) {
+            labelBoxes[i].addItem(label);
+        }
+    }
+
+    /**
      * Задает размеры и расположение слайдеров, которые задают необходимые параметры интервалов (ширину и разность значений)
      *
      * @param constraints - параметры расположения элементов в окне
@@ -177,8 +261,10 @@ public class GraphViewer {
                 "Ограничение на ширину: ", constraints);
         initializeSlider(thresholdMultSlider, 0, thresholdSliderWidth, 9, thresholdMultNumber,
                 e -> thresholdMultNumber.setText(roundNumber(getThreshold()) + " * sigma"), "Ограничение на разность величин: ", constraints);
-        initializeSlider(maxCategoriesSlider, 1, config.getMaxCategoriesPerCombo(), config.getMaxCategoriesPerCombo(), maxCategoriesNumber,
+        if(!simpleMode) {
+            initializeSlider(maxCategoriesSlider, 1, config.getMaxCategoriesPerCombo(), config.getMaxCategoriesPerCombo(), maxCategoriesNumber,
                 e -> maxCategoriesNumber.setText(maxCategoriesSlider.getValue() + ""), "Максимальное количество категорий: ", constraints);
+        }
         initializeSlider(maxGraphsSlider, 1, 100, 16, maxGraphsNumber,
                 e -> maxGraphsNumber.setText(maxGraphsSlider.getValue() + ""), "Максимальное количество графиков: ", constraints);
     }
@@ -259,7 +345,7 @@ public class GraphViewer {
      * Создает составные части окна, одна из которых содержит кнопки с параметрами интервалов, а другая - собственно граф.
      */
     private void initializePanels() {
-        setSize(buttonsPanel, 600, 250);
+        setSize(buttonsPanel, 600, 300);
         setSize(graphPanel, 600, 480);
         buttonsPanel.setLayout(new BoxLayout(buttonsPanel, BoxLayout.Y_AXIS));
 
@@ -272,7 +358,7 @@ public class GraphViewer {
      */
     private void setupWindow() {
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        mainFrame.setSize(650, 750);
+        mainFrame.setSize(650, 800);
         mainFrame.setTitle("Графики интервалов");
         mainFrame.setLayout(new BoxLayout(mainFrame.getContentPane(), BoxLayout.Y_AXIS));
         mainFrame.setVisible(true);
@@ -285,27 +371,57 @@ public class GraphViewer {
      */
     private void getIntervals() {
         List<String> categoryNames = dbService.getCategoryNames(tableName);
-        CategoryCombination categoryCombos = new CategoryCombination(categoryNames);
-        List<String[]> categoryCombosFinal = new ArrayList<>();
-        for(int i = 1; i <= maxCategoriesSlider.getValue(); i++) {
-            categoryCombosFinal.addAll(categoryCombos.combos);
-            if(i < maxCategoriesSlider.getValue()) {
-                categoryCombos.addCategory(categoryNames);
+        if(simpleMode) {
+            List<String> colNames = new ArrayList<>();
+            List<String> labels = new ArrayList<>();
+            for(int i = 0; i < colNameBoxes.length; i++) {
+                String colName = (String)colNameBoxes[i].getSelectedItem();
+                String label = (String)labelBoxes[i].getSelectedItem();
+                if(!colName.equals(labelAbsent) && !label.equals(labelAbsent)) {
+                    colNames.add(colName);
+                    labels.add("'" + label + "'");
+                }
             }
-        }
-        switch(graphTypeBox.getSelectedIndex()) {
-            case 0:
-                logger.logMessage("Начинается получение графиков уменьшения...");
-                decreaseIntervals = dbService.getDecreases(tableName, categoryCombosFinal, approximationType,
-                        getMinInterval(), getThreshold());
-                logger.logMessage("Закончено получение графиков уменьшения.");
-                break;
-            case 1:
-                logger.logMessage("Начинается получение графиков отсутствия роста...");
-                decreaseIntervals = dbService.getConstants(tableName, categoryCombosFinal, approximationType,
-                        getMinInterval(), getThreshold());
-                logger.logMessage("Закончено получение графиков отсутствия роста.");
-                break;
+            if(colNames.size() <= 0) {
+                return;
+            }
+            switch(graphTypeBox.getSelectedIndex()) {
+                case 0:
+                    logger.logMessage("Начинается получение графиков уменьшения...");
+                    decreaseIntervals = dbService.getDecreasesSimple(tableName, colNames.toArray(new String[0]),
+                            labels.toArray(new String[0]), approximationType, getMinInterval(), getThreshold());
+                    logger.logMessage("Закончено получение графиков уменьшения.");
+                    break;
+                case 1:
+                    logger.logMessage("Начинается получение графиков отсутствия роста...");
+                    decreaseIntervals = dbService.getConstantsSimple(tableName, colNames.toArray(new String[0]),
+                            labels.toArray(new String[0]), approximationType, getMinInterval(), getThreshold());
+                    logger.logMessage("Закончено получение графиков отсутствия роста.");
+                    break;
+            }
+        } else {
+            List<String[]> categoryCombosFinal = new ArrayList<>();
+            CategoryCombination categoryCombos = new CategoryCombination(categoryNames);
+            for(int i = 1; i <= maxCategoriesSlider.getValue(); i++) {
+                categoryCombosFinal.addAll(categoryCombos.combos);
+                if(i < maxCategoriesSlider.getValue()) {
+                    categoryCombos.addCategory(categoryNames);
+                }
+            }
+            switch(graphTypeBox.getSelectedIndex()) {
+                case 0:
+                    logger.logMessage("Начинается получение графиков уменьшения...");
+                    decreaseIntervals = dbService.getDecreases(tableName, categoryCombosFinal, approximationType,
+                            getMinInterval(), getThreshold());
+                    logger.logMessage("Закончено получение графиков уменьшения.");
+                    break;
+                case 1:
+                    logger.logMessage("Начинается получение графиков отсутствия роста...");
+                    decreaseIntervals = dbService.getConstants(tableName, categoryCombosFinal, approximationType,
+                            getMinInterval(), getThreshold());
+                    logger.logMessage("Закончено получение графиков отсутствия роста.");
+                    break;
+            }
         }
         intervalFinder.removeIntersectingIntervals(decreaseIntervals);
         if(decreaseIntervals.size() > maxGraphsSlider.getValue()) {

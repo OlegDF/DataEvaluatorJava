@@ -200,6 +200,28 @@ public class DatabaseService {
         return new ArrayList<>();
     }
 
+    public List<String> getLabelList(String tableName, String category, int maxCount) {
+        StringBuilder query = new StringBuilder();
+        try {
+            query.append("SELECT ").append(category).append(" FROM ").append(tableName).append(" GROUP BY ").
+                    append(category).append(" ORDER BY sum(amount) DESC LIMIT ").
+                    append(maxCount).append(";");
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
+            res.beforeFirst();
+            List<String> labels = new ArrayList<>();
+            res.beforeFirst();
+            while(res.next()) {
+                String colName = res.getString(category);
+                labels.add(colName);
+            }
+            return labels;
+        } catch (SQLException ex) {
+            logger.logError("Не удалось получить разрез по запросу: " + query);
+            handleSQLException(ex);
+        }
+        return new ArrayList<>();
+    }
+
     /**
      * Получает список названий столбцов с категориями в определенной таблице.
      *
@@ -209,7 +231,7 @@ public class DatabaseService {
     public List<String> getCategoryNames(String tableName) {
         String query = "";
         try {
-            query = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "';";
+            query = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "' ORDER BY column_name;";
             ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query);
             res.last();
             List<String> categoryNames = new ArrayList<>();
@@ -360,6 +382,49 @@ public class DatabaseService {
         return new ArrayList<>();
     }
 
+    /**
+     * Получает из таблицы интервалов с уменьшениями список интервалов, сгруппированных по определенным столбцам и
+     * отвечающих определенным требованиям. Работает при выборе интервалов из одного среза.
+     *
+     * @param tableName - название таблицы
+     * @param colNames - названия столбцов таблицы
+     * @param labels - значения столбцов таблицы
+     * @param approximationType - тип приближения срезов
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля разности между максимальным и минимальным значением
+     *                        на всем разрезе, от 0 до 1)
+     * @return список интервалов
+     */
+    public List<SuspiciousInterval> getDecreasesSimple(String tableName, String[] colNames, String[] labels, ApproximationType approximationType,
+                                                 double minIntervalMult, double thresholdMult) {
+        StringBuilder query = new StringBuilder();
+        try {
+            String tableDecName = tableName + "_decreases";
+            query.append("SELECT * FROM ").append(tableDecName).append(" WHERE (");
+            List<String> categoryNames = getCategoryNames(tableDecName);
+            appendCategoriesSimple(colNames, labels, query, categoryNames);
+            query.append(") AND relative_width > ").append(minIntervalMult);
+            query.append(" AND -relative_diff > ").append(thresholdMult);
+            query.append(" LIMIT 1024;");
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
+            res.last();
+            List<SuspiciousInterval> intervals = new ArrayList<>();
+            res.beforeFirst();
+            List<Slice> slices = new ArrayList<>();
+            while(res.next()) {
+                Slice slice = matchSlice(tableName, approximationType, categoryNames, res, slices);
+                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2")));
+            }
+            return intervals;
+        } catch (SQLException ex) {
+            logger.logError("Не удалось получить интервалы с уменьшением по запросу: " + query);
+            handleSQLException(ex);
+        }
+        return new ArrayList<>();
+    }
+
 
     /**
      * Вставляет в таблицу интервалов с отсутствием изменений новые строки с указанными значениями данных.
@@ -466,6 +531,49 @@ public class DatabaseService {
     }
 
     /**
+     * Получает из таблицы интервалов с отсутствием изменений список интервалов, сгруппированных по определенным столбцам и
+     * отвечающих определенным требованиям. Работает при выборе интервалов из одного среза.
+     *
+     * @param tableName - название таблицы
+     * @param colNames - названия столбцов таблицы
+     * @param labels - значения столбцов таблицы
+     * @param approximationType - тип приближения срезов
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля разности между максимальным и минимальным значением
+     *                        на всем разрезе, от 0 до 1)
+     * @return список интервалов
+     */
+    public List<SuspiciousInterval> getConstantsSimple(String tableName, String[] colNames, String[] labels, ApproximationType approximationType,
+                                                 double minIntervalMult, double thresholdMult) {
+        StringBuilder query = new StringBuilder();
+        try {
+            String tableDecName = tableName + "_constants";
+            query.append("SELECT * FROM ").append(tableDecName).append(" WHERE (");
+            List<String> categoryNames = getCategoryNames(tableDecName);
+            appendCategoriesSimple(colNames, labels, query, categoryNames);
+            query.append(") AND relative_width > ").append(minIntervalMult);
+            query.append(" AND relative_value_range < ").append(thresholdMult);
+            query.append(" LIMIT 1024;");
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
+            res.last();
+            List<SuspiciousInterval> intervals = new ArrayList<>();
+            res.beforeFirst();
+            List<Slice> slices = new ArrayList<>();
+            while(res.next()) {
+                Slice slice = matchSlice(tableName, approximationType, categoryNames, res, slices);
+                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2")));
+            }
+            return intervals;
+        } catch (SQLException ex) {
+            logger.logError("Не удалось получить интервалы с отсутствием роста по запросу: " + query);
+            handleSQLException(ex);
+        }
+        return new ArrayList<>();
+    }
+
+    /**
      * Закрывает соединение с базой данных.
      */
     public void closeConnection() {
@@ -508,6 +616,33 @@ public class DatabaseService {
             }
             if (k < categoryCombos.size() - 1) {
                 query.append(" OR ");
+            }
+        }
+    }
+
+    /**
+     * Добавляет к запросу получения интервалов список значений категорий в виде логического выражения. Работает при
+     * выборе интервалов из одного среза.
+     *
+     * @param colNames - названия столбцов таблицы
+     * @param labels - значения столбцов таблицы
+     * @param query - запрос
+     * @param categoryNames - названия столбцов
+     */
+    private void appendCategoriesSimple(String[] colNames, String[] labels, StringBuilder query, List<String> categoryNames) {
+        for(int k = 0; k < categoryNames.size(); k++) {
+            boolean categoryPresent = false;
+            for(int i = 0; i < colNames.length; i++) {
+                if(colNames[i].equals(categoryNames.get(k))) {
+                    query.append(colNames[i]).append(" = ").append(labels[i]);
+                    categoryPresent = true;
+                }
+            }
+            if(!categoryPresent) {
+                query.append(categoryNames.get(k)).append(" = '").append(labelNotPresent).append("'");
+            }
+            if(k < categoryNames.size() - 1) {
+                query.append(" AND ");
             }
         }
     }
