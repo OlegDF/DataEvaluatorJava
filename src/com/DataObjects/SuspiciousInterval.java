@@ -12,11 +12,11 @@ public class SuspiciousInterval {
     public final int pos1, pos2;
     private final Approximation partialApproximation;
 
-    public SuspiciousInterval(Slice slice, int pos1, int pos2) {
+    public SuspiciousInterval(Slice slice, int pos1, int pos2, double minStartDate) {
         this.slice = slice;
         this.pos1 = pos1;
         this.pos2 = pos2;
-        this.partialApproximation = getPartialApproximation();
+        this.partialApproximation = getPartialApproximation(minStartDate);
     }
 
     /**
@@ -178,10 +178,11 @@ public class SuspiciousInterval {
      * Получает функцию приближения относительно начальной части среза, от первой точки среза до первой точки данного
      * интервала Получает частичное приближение, только если рассматриваемая начальная часть среза имеет достаточную длину.
      *
+     * @param minStartDate - множитель минимальной длины начальной части среза (от 0 до 1)
      * @return частичная функция приближения
      */
-    private Approximation getPartialApproximation() {
-        if(slice.getDateDistance(0, pos1) >= slice.dateRange * 0.2) {
+    private Approximation getPartialApproximation(double minStartDate) {
+        if(slice.getDateDistance(0, pos1) >= slice.dateRange * minStartDate) {
             return new LinearRegression(slice, 0, pos1);
         } else {
             return null;

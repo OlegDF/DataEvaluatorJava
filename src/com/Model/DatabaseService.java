@@ -372,7 +372,7 @@ public class DatabaseService {
             List<Slice> slices = new ArrayList<>();
             while(res.next()) {
                 Slice slice = matchSlice(tableName, approximationType, categoryNames, res, slices);
-                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2")));
+                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2"), 0.05));
             }
             return intervals;
         } catch (SQLException ex) {
@@ -415,7 +415,7 @@ public class DatabaseService {
             List<Slice> slices = new ArrayList<>();
             while(res.next()) {
                 Slice slice = matchSlice(tableName, approximationType, categoryNames, res, slices);
-                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2")));
+                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2"), 0.05));
             }
             return intervals;
         } catch (SQLException ex) {
@@ -520,7 +520,7 @@ public class DatabaseService {
             List<Slice> slices = new ArrayList<>();
             while(res.next()) {
                 Slice slice = matchSlice(tableName, approximationType, categoryNames, res, slices);
-                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2")));
+                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2"), 0.05));
             }
             return intervals;
         } catch (SQLException ex) {
@@ -563,7 +563,7 @@ public class DatabaseService {
             List<Slice> slices = new ArrayList<>();
             while(res.next()) {
                 Slice slice = matchSlice(tableName, approximationType, categoryNames, res, slices);
-                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2")));
+                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2"), 0.05));
             }
             return intervals;
         } catch (SQLException ex) {

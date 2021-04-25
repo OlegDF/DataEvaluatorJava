@@ -166,7 +166,7 @@ public class Slice {
      * @return относительное среднеквадратичное отклонение
      */
     public double getRelativeSigma() {
-        double res = approximation.getSigma() / getValueRange();
+        double res = approximation.getSigma() / valueRange;
         return res == 0 ? 1 : res;
     }
 
