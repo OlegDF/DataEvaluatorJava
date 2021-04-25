@@ -18,6 +18,7 @@ import java.awt.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -25,8 +26,9 @@ import java.util.List;
  */
 public class GraphViewer {
 
-    private String labelAbsent = "-";
-    private final boolean simpleMode;
+    private final String labelAbsent = "-";
+    private final String labelAll = "все значения";
+    private boolean simpleMode;
 
     private final Config config;
     private final Logger logger;
@@ -40,6 +42,7 @@ public class GraphViewer {
     private final JPanel leftRightButtonsPanel;
 
     private final JComboBox<String> tableBox;
+    private final JComboBox<String> interfaceTypeBox;
     private final JComboBox<String> graphTypeBox;
 
     private final JComboBox<String>[] colNameBoxes;
@@ -64,6 +67,8 @@ public class GraphViewer {
     private final JButton startCalculationButton;
     private final JButton graphLeftButton, graphRightButton;
     private final JLabel currentGraphNumber;
+
+    private final List<JPanel> simpleModePanels, regularModePanels;
 
     private String tableName;
     private ApproximationType approximationType;
@@ -113,8 +118,12 @@ public class GraphViewer {
 
         graphsUnavailableText = new JLabel();
 
+        simpleModePanels = new ArrayList<>();
+        regularModePanels = new ArrayList<>();
+
         graphTypeBox = new JComboBox<>();
         tableBox = new JComboBox<>();
+        interfaceTypeBox = new JComboBox<>();
         initializeInterface(tableName);
         setupWindow();
     }
@@ -146,7 +155,7 @@ public class GraphViewer {
                 tableBox.setSelectedItem(table);
             }
         }
-        setSize(tableBox, 150, 30);
+        setSize(tableBox, 120, 30);
         tableBox.setAlignmentX(Component.CENTER_ALIGNMENT);
         tableBox.addItemListener(e -> {
             tableName = (String)tableBox.getSelectedItem();
@@ -156,12 +165,32 @@ public class GraphViewer {
         });
         JLabel tableLabel = new JLabel();
         tableLabel.setText("Название таблицы: ");
-        setSize(tableLabel, 150, 30);
+        setSize(tableLabel, 120, 30);
+
+        interfaceTypeBox.addItem("перебор комбинаций категорий");
+        interfaceTypeBox.addItem("выбор среза");
+        interfaceTypeBox.setSelectedIndex(simpleMode ? 1 : 0);
+        setSize(interfaceTypeBox, 120, 30);
+        interfaceTypeBox.setAlignmentX(Component.CENTER_ALIGNMENT);
+        interfaceTypeBox.addItemListener(e -> {
+            simpleMode = interfaceTypeBox.getSelectedIndex() != 0;
+            for(JPanel panel: simpleModePanels) {
+                panel.setVisible(simpleMode);
+            }
+            for(JPanel panel: regularModePanels) {
+                panel.setVisible(!simpleMode);
+            }
+        });
+        JLabel interfaceTypeLabel = new JLabel();
+        interfaceTypeLabel.setText("Название таблицы: ");
+        setSize(interfaceTypeLabel, 120, 30);
 
         JPanel tablePanel = new JPanel();
-        setSize(tablePanel, 420, 30);
+        setSize(tablePanel, 600, 30);
         tablePanel.add(tableLabel, constraints);
         tablePanel.add(tableBox, constraints);
+        tablePanel.add(interfaceTypeLabel, constraints);
+        tablePanel.add(interfaceTypeBox, constraints);
 
         graphTypeBox.addItem("уменьшение");
         graphTypeBox.addItem("отсутствие роста");
@@ -203,9 +232,9 @@ public class GraphViewer {
             colNamePanel.add(colNameBoxes[i], constraints);
             colNamePanel.add(labelBoxes[i], constraints);
 
-            if(simpleMode) {
-                buttonsPanel.add(colNamePanel, constraints);
-            }
+            buttonsPanel.add(colNamePanel, constraints);
+            simpleModePanels.add(colNamePanel);
+            colNamePanel.setVisible(simpleMode);
         }
         fillCategoryBoxes();
     }
@@ -244,6 +273,7 @@ public class GraphViewer {
     private void fillLabelBox(int i) {
         labelBoxes[i].removeAllItems();
         labelBoxes[i].addItem(labelAbsent);
+        labelBoxes[i].addItem(labelAll);
         List<String> labelsList = dbService.getLabelList(tableName, (String)colNameBoxes[i].getSelectedItem(), config.getMaxSlicesPerCombo());
         for(String label: labelsList) {
             labelBoxes[i].addItem(label);
@@ -261,10 +291,10 @@ public class GraphViewer {
                 "Ограничение на ширину: ", constraints);
         initializeSlider(thresholdMultSlider, 0, thresholdSliderWidth, 9, thresholdMultNumber,
                 e -> thresholdMultNumber.setText(roundNumber(getThreshold()) + " * sigma"), "Ограничение на разность величин: ", constraints);
-        if(!simpleMode) {
-            initializeSlider(maxCategoriesSlider, 1, config.getMaxCategoriesPerCombo(), config.getMaxCategoriesPerCombo(), maxCategoriesNumber,
+        JPanel maxCategoriesPanel = initializeSlider(maxCategoriesSlider, 1, config.getMaxCategoriesPerCombo(), config.getMaxCategoriesPerCombo(), maxCategoriesNumber,
                 e -> maxCategoriesNumber.setText(maxCategoriesSlider.getValue() + ""), "Максимальное количество категорий: ", constraints);
-        }
+        regularModePanels.add(maxCategoriesPanel);
+        maxCategoriesPanel.setVisible(!simpleMode);
         initializeSlider(maxGraphsSlider, 1, 100, 16, maxGraphsNumber,
                 e -> maxGraphsNumber.setText(maxGraphsSlider.getValue() + ""), "Максимальное количество графиков: ", constraints);
     }
@@ -273,7 +303,7 @@ public class GraphViewer {
         return new BigDecimal(num).setScale(2, RoundingMode.HALF_UP) + "";
     }
 
-    private void initializeSlider(JSlider slider, int sliderMin, int sliderMax, int initialValue, JLabel sliderNumber,
+    private JPanel initializeSlider(JSlider slider, int sliderMin, int sliderMax, int initialValue, JLabel sliderNumber,
                                     ChangeListener listener, String labelText, GridBagConstraints constraints) {
         slider.setMinimum(sliderMin);
         slider.setMaximum(sliderMax);
@@ -295,6 +325,7 @@ public class GraphViewer {
         sliderPanel.add(slider, constraints);
         sliderPanel.add(sliderNumber, constraints);
         buttonsPanel.add(sliderPanel, constraints);
+        return sliderPanel;
     }
 
     /**
@@ -370,58 +401,12 @@ public class GraphViewer {
      * отображает наиболее значимый из них на графике.
      */
     private void getIntervals() {
-        List<String> categoryNames = dbService.getCategoryNames(tableName);
         if(simpleMode) {
-            List<String> colNames = new ArrayList<>();
-            List<String> labels = new ArrayList<>();
-            for(int i = 0; i < colNameBoxes.length; i++) {
-                String colName = (String)colNameBoxes[i].getSelectedItem();
-                String label = (String)labelBoxes[i].getSelectedItem();
-                if(!colName.equals(labelAbsent) && !label.equals(labelAbsent)) {
-                    colNames.add(colName);
-                    labels.add("'" + label + "'");
-                }
-            }
-            if(colNames.size() <= 0) {
+            if(!getGraphsSimple()) {
                 return;
             }
-            switch(graphTypeBox.getSelectedIndex()) {
-                case 0:
-                    logger.logMessage("Начинается получение графиков уменьшения...");
-                    decreaseIntervals = dbService.getDecreasesSimple(tableName, colNames.toArray(new String[0]),
-                            labels.toArray(new String[0]), approximationType, getMinInterval(), getThreshold());
-                    logger.logMessage("Закончено получение графиков уменьшения.");
-                    break;
-                case 1:
-                    logger.logMessage("Начинается получение графиков отсутствия роста...");
-                    decreaseIntervals = dbService.getConstantsSimple(tableName, colNames.toArray(new String[0]),
-                            labels.toArray(new String[0]), approximationType, getMinInterval(), getThreshold());
-                    logger.logMessage("Закончено получение графиков отсутствия роста.");
-                    break;
-            }
         } else {
-            List<String[]> categoryCombosFinal = new ArrayList<>();
-            CategoryCombination categoryCombos = new CategoryCombination(categoryNames);
-            for(int i = 1; i <= maxCategoriesSlider.getValue(); i++) {
-                categoryCombosFinal.addAll(categoryCombos.combos);
-                if(i < maxCategoriesSlider.getValue()) {
-                    categoryCombos.addCategory(categoryNames);
-                }
-            }
-            switch(graphTypeBox.getSelectedIndex()) {
-                case 0:
-                    logger.logMessage("Начинается получение графиков уменьшения...");
-                    decreaseIntervals = dbService.getDecreases(tableName, categoryCombosFinal, approximationType,
-                            getMinInterval(), getThreshold());
-                    logger.logMessage("Закончено получение графиков уменьшения.");
-                    break;
-                case 1:
-                    logger.logMessage("Начинается получение графиков отсутствия роста...");
-                    decreaseIntervals = dbService.getConstants(tableName, categoryCombosFinal, approximationType,
-                            getMinInterval(), getThreshold());
-                    logger.logMessage("Закончено получение графиков отсутствия роста.");
-                    break;
-            }
+            getGraphsRegular();
         }
         intervalFinder.removeIntersectingIntervals(decreaseIntervals);
         if(decreaseIntervals.size() > maxGraphsSlider.getValue()) {
@@ -434,6 +419,100 @@ public class GraphViewer {
             drawGraph();
         } else {
             displayLackOfGraphs();
+        }
+    }
+
+    private boolean getGraphsSimple() {
+        List<String> colNames = new ArrayList<>();
+        List<String[]> labels = new ArrayList<>();
+        String colName = (String)colNameBoxes[0].getSelectedItem();
+        String label = (String)labelBoxes[0].getSelectedItem();
+        if(!colName.equals(labelAbsent) && !label.equals(labelAbsent)) {
+            colNames.add(colName);
+            if(!label.equals(labelAll)) {
+                String[] labelsComboNew = new String[1];
+                labelsComboNew[0] = "'" + label + "'";
+                labels.add(labelsComboNew);
+            } else {
+                for(int j = 2; j < labelBoxes[0].getItemCount(); j++) {
+                    String[] labelsComboNew = new String[1];
+                    labelsComboNew[0] = "'" + labelBoxes[0].getItemAt(j) + "'";
+                    labels.add(labelsComboNew);
+                }
+            }
+        }
+        for(int i = 1; i < colNameBoxes.length; i++) {
+            colName = (String)colNameBoxes[i].getSelectedItem();
+            label = (String)labelBoxes[i].getSelectedItem();
+            List<String[]> labelsNew = new ArrayList<>();
+            if(!colName.equals(labelAbsent) && !label.equals(labelAbsent)) {
+                colNames.add(colName);
+                if(!label.equals(labelAll)) {
+                    for(String[] labelsCombo: labels) {
+                        String[] labelsComboNew = Arrays.copyOf(labelsCombo, labelsCombo.length + 1);
+                        labelsComboNew[labelsComboNew.length - 1] = "'" + label + "'";
+                        labelsNew.add(labelsComboNew);
+                    }
+                } else {
+                    for(String[] labelsCombo: labels) {
+                        for(int j = 2; j < labelBoxes[i].getItemCount(); j++) {
+                            String[] labelsComboNew = Arrays.copyOf(labelsCombo, labelsCombo.length + 1);
+                            labelsComboNew[labelsComboNew.length - 1] = "'" + labelBoxes[i].getItemAt(j) + "'";
+                            labelsNew.add(labelsComboNew);
+                        }
+                    }
+                }
+                labels = labelsNew;
+            }
+        }
+        System.out.println(colNames.toString());
+        System.out.println(labels.size());
+        if(colNames.size() <= 0) {
+            return false;
+        }
+        decreaseIntervals = new ArrayList<>();
+        for(String[] labelsCombo: labels) {
+            switch(graphTypeBox.getSelectedIndex()) {
+                case 0:
+                    logger.logMessage("Начинается получение графиков уменьшения...");
+                    decreaseIntervals.addAll(dbService.getDecreasesSimple(tableName, colNames.toArray(new String[0]),
+                            labelsCombo, approximationType, getMinInterval(), getThreshold()));
+                    logger.logMessage("Закончено получение графиков уменьшения.");
+                    break;
+                case 1:
+                    logger.logMessage("Начинается получение графиков отсутствия роста...");
+                    decreaseIntervals.addAll(dbService.getConstantsSimple(tableName, colNames.toArray(new String[0]),
+                            labelsCombo, approximationType, getMinInterval(), getThreshold()));
+                    logger.logMessage("Закончено получение графиков отсутствия роста.");
+                    break;
+            }
+        }
+        return true;
+    }
+
+    private void getGraphsRegular() {
+        List<String> categoryNames = dbService.getCategoryNames(tableName);
+        List<String[]> categoryCombosFinal = new ArrayList<>();
+        CategoryCombination categoryCombos = new CategoryCombination(categoryNames);
+        for(int i = 1; i <= maxCategoriesSlider.getValue(); i++) {
+            categoryCombosFinal.addAll(categoryCombos.combos);
+            if(i < maxCategoriesSlider.getValue()) {
+                categoryCombos.addCategory(categoryNames);
+            }
+        }
+        switch(graphTypeBox.getSelectedIndex()) {
+            case 0:
+                logger.logMessage("Начинается получение графиков уменьшения...");
+                decreaseIntervals = dbService.getDecreases(tableName, categoryCombosFinal, approximationType,
+                        getMinInterval(), getThreshold());
+                logger.logMessage("Закончено получение графиков уменьшения.");
+                break;
+            case 1:
+                logger.logMessage("Начинается получение графиков отсутствия роста...");
+                decreaseIntervals = dbService.getConstants(tableName, categoryCombosFinal, approximationType,
+                        getMinInterval(), getThreshold());
+                logger.logMessage("Закончено получение графиков отсутствия роста.");
+                break;
         }
     }
 
