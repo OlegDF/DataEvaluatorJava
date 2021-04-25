@@ -182,7 +182,7 @@ public class GraphViewer {
             }
         });
         JLabel interfaceTypeLabel = new JLabel();
-        interfaceTypeLabel.setText("Название таблицы: ");
+        interfaceTypeLabel.setText("Режим работы: ");
         setSize(interfaceTypeLabel, 120, 30);
 
         JPanel tablePanel = new JPanel();

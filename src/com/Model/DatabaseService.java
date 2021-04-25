@@ -200,23 +200,57 @@ public class DatabaseService {
         return new ArrayList<>();
     }
 
-    public List<String> getLabelList(String tableName, String category, int maxCount) {
+    /**
+     * Получает список значений категорий из таблицы исходных данных и записывает их в новую таблицу.
+     *
+     * @param tableName - название таблицы
+     */
+    public void insertLabelList(String tableName) {
         StringBuilder query = new StringBuilder();
         try {
-            query.append("SELECT ").append(category).append(" FROM ").append(tableName).append(" GROUP BY ").
-                    append(category).append(" ORDER BY sum(amount) DESC LIMIT ").
-                    append(maxCount).append(";");
-            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
-            res.beforeFirst();
+            List<String> categories = getCategoryNames(tableName);
+            for(String category: categories) {
+                query = new StringBuilder();
+                query.append("SELECT ").append(category).append(" FROM ").append(tableName).append(" GROUP BY ").
+                        append(category).append(" ORDER BY sum(amount) DESC;");
+                ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
+                res.beforeFirst();
+                List<String> labels = new ArrayList<>();
+                while(res.next()) {
+                    String colName = res.getString(category);
+                    labels.add(colName);
+                }
+                query = new StringBuilder();
+                query.append("INSERT INTO ").append(tableName).append("_labels(category, label) VALUES(");
+                for(int i = 0; i < labels.size(); i++) {
+                    query.append("'").append(category).append("','").append(labels.get(i)).append("'");
+                    if(i < labels.size() - 1) {
+                        query.append("),(");
+                    }
+                }
+                query.append(");");
+                connection.createStatement().executeUpdate(query.toString());
+            }
+        } catch (SQLException ex) {
+            logger.logError("Не удалось получить разрез по запросу: " + query);
+            handleSQLException(ex);
+        }
+    }
+
+    public List<String> getLabelList(String tableName, String category, int maxCount) {
+        String query = "";
+        try {
+            query = "SELECT label FROM " + tableName + "_labels WHERE category = '" + category + "' LIMIT " + maxCount + ";";
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query);
+            res.last();
             List<String> labels = new ArrayList<>();
             res.beforeFirst();
             while(res.next()) {
-                String colName = res.getString(category);
-                labels.add(colName);
+                labels.add(res.getString("label"));
             }
             return labels;
         } catch (SQLException ex) {
-            logger.logError("Не удалось получить разрез по запросу: " + query);
+            logger.logError("Не удалось получить список столбцов по запросу: " + query);
             handleSQLException(ex);
         }
         return new ArrayList<>();
@@ -266,7 +300,7 @@ public class DatabaseService {
             res.beforeFirst();
             while(res.next()) {
                 String tableName = res.getString("table_name");
-                if(!tableName.endsWith("_decreases") && !tableName.endsWith("_constants")) {
+                if(!tableName.endsWith("_decreases") && !tableName.endsWith("_constants") && !tableName.endsWith("_labels")) {
                     tableNames.add(tableName);
                 }
             }

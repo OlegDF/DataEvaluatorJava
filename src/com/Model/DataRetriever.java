@@ -48,7 +48,7 @@ public class DataRetriever {
                 rows.add(row);
                 rowLine = lineReader.readLine();
                 rowsExported++;
-                if(rowsExported % 10 == 0) {
+                if(rowsExported % 1000 == 0) {
                     dbService.insertData(tableName, colNames, colTypes, rows);
                     rows = new ArrayList<>();
                     logger.logMessage("Экспортировано " + rowsExported + " строк");
@@ -56,6 +56,11 @@ public class DataRetriever {
             }
             dbService.insertData(tableName, colNames, colTypes, rows);
             logger.logMessage("Экспортировано " + rowsExported + " строк");
+
+            String[] colNamesLabels = {"category", "label"};
+            String[] colTypesLabels = {"varchar(255)", "varchar(255)"};
+            dbService.createTable(tableName + "_labels", colNamesLabels, colTypesLabels);
+            dbService.insertLabelList(tableName);
             logger.logMessage("Закончен экспорт файла " + tableName + ".csv в таблицу.");
         } catch (IOException ex) {
             System.err.println(ex);
