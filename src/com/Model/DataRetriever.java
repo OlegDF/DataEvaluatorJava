@@ -6,7 +6,9 @@ import com.SupportClasses.Logger;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.sql.Date;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -37,7 +39,7 @@ public class DataRetriever {
             String[] colNames = lineReader.readLine().split(";", -1);
             String rowLine = lineReader.readLine();
             String[] row = rowLine.split(";", -1);
-            String[] colTypes = getColTypes(row);
+            String[] colTypes = getColTypes(colNames, row);
 
             dbService.createTable(tableName, colNames, colTypes);
 
@@ -56,6 +58,11 @@ public class DataRetriever {
             }
             dbService.insertData(tableName, colNames, colTypes, rows);
             logger.logMessage("Экспортировано " + rowsExported + " строк");
+
+            String[] colNamesLabels = {"category", "label"};
+            String[] colTypesLabels = {"varchar(255)", "varchar(255)"};
+            dbService.createTable(tableName + "_labels", colNamesLabels, colTypesLabels);
+            dbService.insertLabelList(tableName);
             logger.logMessage("Закончен экспорт файла " + tableName + ".csv в таблицу.");
         } catch (IOException ex) {
             System.err.println(ex);
@@ -70,12 +77,12 @@ public class DataRetriever {
      * @param firstRow - первая строка, содержащая данные для вставки в таблицу
      * @return список названий типов данных
      */
-    private String[] getColTypes(String[] firstRow) {
+    private String[] getColTypes(String[] colNames, String[] firstRow) {
         String[] colTypes = new String[firstRow.length];
 
         final Pattern intPattern = Pattern.compile("-?\\d+");
         final Pattern floatPattern = Pattern.compile("-?\\d+(\\.\\d+)?");
-        final Pattern timestampPattern = Pattern.compile("\\d{4}-\\d{2}-\\d{2} ");
+        final Pattern timestampPattern = Pattern.compile("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} *");
 
         for(int i = 0; i < firstRow.length; i++) {
             if(intPattern.matcher(firstRow[i]).matches()) {
@@ -85,6 +92,9 @@ public class DataRetriever {
             } else if(timestampPattern.matcher(firstRow[i]).matches()) {
                 colTypes[i] = "timestamptz";
             } else {
+                colTypes[i] = "varchar(255)";
+            }
+            if(colNames[i].startsWith("category") || colNames[i].startsWith("version")) {
                 colTypes[i] = "varchar(255)";
             }
         }

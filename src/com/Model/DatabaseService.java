@@ -122,12 +122,13 @@ public class DatabaseService {
      * Получает разрез - набор данных, в которых один или более столбцов равны заданным значениям.
      *
      * @param tableName - название таблицы
+     * @param valueName - название ряда данных
      * @param colNames - названия столбцов, по которым отбираются данные
      * @param labels - значения в соответствующих столбцах в строковом виде
      * @param approximationType - тип функции приближения
      * @return объект-разрез
      */
-    public Slice getSlice(String tableName, String[] colNames, String[] labels, ApproximationType approximationType) {
+    public Slice getSlice(String tableName, String valueName, String[] colNames, String[] labels, ApproximationType approximationType) {
         StringBuilder query = new StringBuilder();
         try {
             query.append("SELECT * FROM ").append(tableName).append(" WHERE ");
@@ -146,15 +147,15 @@ public class DatabaseService {
             res.beforeFirst();
             int i = 0;
             while(res.next()) {
-                points[i] = new SlicePoint(res.getLong("value_1"), res.getLong("amount"), res.getTimestamp("first_date"));
+                points[i] = new SlicePoint(res.getLong(valueName), res.getLong("amount"), res.getTimestamp("first_date"));
                 i++;
             }
-            return new Slice(tableName, colNames, labels, points, approximationType);
+            return new Slice(tableName, valueName, colNames, labels, points, approximationType);
         } catch (SQLException ex) {
             logger.logError("Не удалось получить разрез по запросу: " + query);
             handleSQLException(ex);
         }
-        return new Slice(tableName, colNames, labels);
+        return new Slice(tableName, valueName, colNames, labels);
     }
 
     /**
@@ -201,6 +202,62 @@ public class DatabaseService {
     }
 
     /**
+     * Получает список значений категорий из таблицы исходных данных и записывает их в новую таблицу.
+     *
+     * @param tableName - название таблицы
+     */
+    public void insertLabelList(String tableName) {
+        StringBuilder query = new StringBuilder();
+        try {
+            List<String> categories = getCategoryNames(tableName);
+            for(String category: categories) {
+                query = new StringBuilder();
+                query.append("SELECT ").append(category).append(" FROM ").append(tableName).append(" GROUP BY ").
+                        append(category).append(" ORDER BY sum(amount) DESC;");
+                ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
+                res.beforeFirst();
+                List<String> labels = new ArrayList<>();
+                while(res.next()) {
+                    String colName = res.getString(category);
+                    labels.add(colName);
+                }
+                query = new StringBuilder();
+                query.append("INSERT INTO ").append(tableName).append("_labels(category, label) VALUES(");
+                for(int i = 0; i < labels.size(); i++) {
+                    query.append("'").append(category).append("','").append(labels.get(i)).append("'");
+                    if(i < labels.size() - 1) {
+                        query.append("),(");
+                    }
+                }
+                query.append(");");
+                connection.createStatement().executeUpdate(query.toString());
+            }
+        } catch (SQLException ex) {
+            logger.logError("Не удалось получить разрез по запросу: " + query);
+            handleSQLException(ex);
+        }
+    }
+
+    public List<String> getLabelList(String tableName, String category, int maxCount) {
+        String query = "";
+        try {
+            query = "SELECT label FROM " + tableName + "_labels WHERE category = '" + category + "' LIMIT " + maxCount + ";";
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query);
+            res.last();
+            List<String> labels = new ArrayList<>();
+            res.beforeFirst();
+            while(res.next()) {
+                labels.add(res.getString("label"));
+            }
+            return labels;
+        } catch (SQLException ex) {
+            logger.logError("Не удалось получить список столбцов по запросу: " + query);
+            handleSQLException(ex);
+        }
+        return new ArrayList<>();
+    }
+
+    /**
      * Получает список названий столбцов с категориями в определенной таблице.
      *
      * @param tableName - название таблицы
@@ -209,7 +266,7 @@ public class DatabaseService {
     public List<String> getCategoryNames(String tableName) {
         String query = "";
         try {
-            query = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "';";
+            query = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "' ORDER BY column_name;";
             ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query);
             res.last();
             List<String> categoryNames = new ArrayList<>();
@@ -221,6 +278,62 @@ public class DatabaseService {
                 }
             }
             return categoryNames;
+        } catch (SQLException ex) {
+            logger.logError("Не удалось получить список столбцов по запросу: " + query);
+            handleSQLException(ex);
+        }
+        return new ArrayList<>();
+    }
+
+    /**
+     * Получает список названий столбцов с рядами данных.
+     *
+     * @param tableName - название таблицы
+     * @return список столбцов в строковом виде
+     */
+    public List<String> getValueNames(String tableName) {
+        String query = "";
+        try {
+            query = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "' ORDER BY column_name;";
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query);
+            res.last();
+            List<String> categoryNames = new ArrayList<>();
+            res.beforeFirst();
+            while(res.next()) {
+                String colName = res.getString("column_name");
+                if(colName.startsWith("value_")) {
+                    categoryNames.add(colName);
+                }
+            }
+            return categoryNames;
+        } catch (SQLException ex) {
+            logger.logError("Не удалось получить список столбцов по запросу: " + query);
+            handleSQLException(ex);
+        }
+        return new ArrayList<>();
+    }
+
+    /**
+     * Получает список названий таблиц с исходными данными.
+     *
+     * @return список столбцов в строковом виде
+     */
+    public List<String> getTableNames() {
+        String query = "";
+        try {
+            query = "SELECT table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE' " +
+                    "AND table_schema NOT IN ('pg_catalog', 'information_schema') ORDER BY table_name;";
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query);
+            res.last();
+            List<String> tableNames = new ArrayList<>();
+            res.beforeFirst();
+            while(res.next()) {
+                String tableName = res.getString("table_name");
+                if(!tableName.endsWith("_decreases") && !tableName.endsWith("_constants") && !tableName.endsWith("_labels")) {
+                    tableNames.add(tableName);
+                }
+            }
+            return tableNames;
         } catch (SQLException ex) {
             logger.logError("Не удалось получить список столбцов по запросу: " + query);
             handleSQLException(ex);
@@ -245,7 +358,7 @@ public class DatabaseService {
                     query.append(", ");
                 }
             }
-            query.append(", pos1, pos2, decrease_score, relative_width, relative_diff");
+            query.append(", pos1, pos2, decrease_score, relative_width, relative_diff, value_name");
             query.append(") VALUES (");
             for(int k = 0; k < intervals.size(); k++) {
                 SuspiciousInterval interval = intervals.get(k);
@@ -278,6 +391,7 @@ public class DatabaseService {
                 query.append(", ").append(interval.getDecreaseScore());
                 query.append(", ").append(interval.getRelativeWidth());
                 query.append(", ").append(interval.getRelativeDiff() / interval.slice.getRelativeSigma());
+                query.append(", ").append("'").append(interval.slice.valueName).append("'");
                 if(k < intervals.size() - 1) {
                     query.append("),(");
                 }
@@ -295,6 +409,7 @@ public class DatabaseService {
      * отвечающих определенным требованиям.
      *
      * @param tableName - название таблицы
+     * @param valueName - название ряда данных
      * @param categoryCombos - сочетания названий столбцов таблицы
      * @param approximationType - тип приближения срезов
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
@@ -304,8 +419,9 @@ public class DatabaseService {
      *                        на всем разрезе, от 0 до 1)
      * @return список интервалов
      */
-    public List<SuspiciousInterval> getDecreases(String tableName, List<String[]> categoryCombos, ApproximationType approximationType,
-                                                 double minIntervalMult, double thresholdMult) {
+    public List<SuspiciousInterval> getDecreases(String tableName, String valueName, List<String[]> categoryCombos,
+                                                 ApproximationType approximationType, double minIntervalMult,
+                                                 double thresholdMult, int maxIntervals) {
         StringBuilder query = new StringBuilder();
         try {
             String tableDecName = tableName + "_decreases";
@@ -314,15 +430,70 @@ public class DatabaseService {
             appendCategories(categoryCombos, query, categoryNames);
             query.append(") AND relative_width > ").append(minIntervalMult);
             query.append(" AND -relative_diff > ").append(thresholdMult);
+            query.append(" AND value_name = '").append(valueName).append("'");
             query.append(" LIMIT 1024;");
             ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
             res.last();
             List<SuspiciousInterval> intervals = new ArrayList<>();
             res.beforeFirst();
             List<Slice> slices = new ArrayList<>();
-            while(res.next()) {
-                Slice slice = matchSlice(tableName, approximationType, categoryNames, res, slices);
-                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2")));
+            while(res.next() && intervals.size() <= maxIntervals * categoryNames.size()) {
+                int pos1 = res.getInt("pos1");
+                int pos2 = res.getInt("pos2");
+                if(!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
+                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices);
+                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
+                }
+            }
+            return intervals;
+        } catch (SQLException ex) {
+            logger.logError("Не удалось получить интервалы с уменьшением по запросу: " + query);
+            handleSQLException(ex);
+        }
+        return new ArrayList<>();
+    }
+
+    /**
+     * Получает из таблицы интервалов с уменьшениями список интервалов, сгруппированных по определенным столбцам и
+     * отвечающих определенным требованиям. Работает при выборе интервалов из одного среза.
+     *
+     * @param tableName - название таблицы
+     * @param valueName - название ряда данных
+     * @param colNames - названия столбцов таблицы
+     * @param labels - значения столбцов таблицы
+     * @param approximationType - тип приближения срезов
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля разности между максимальным и минимальным значением
+     *                        на всем разрезе, от 0 до 1)
+     * @return список интервалов
+     */
+    public List<SuspiciousInterval> getDecreasesSimple(String tableName, String valueName, String[] colNames, String[] labels,
+                                                       ApproximationType approximationType, double minIntervalMult,
+                                                       double thresholdMult, int maxIntervals) {
+        StringBuilder query = new StringBuilder();
+        try {
+            String tableDecName = tableName + "_decreases";
+            query.append("SELECT * FROM ").append(tableDecName).append(" WHERE (");
+            List<String> categoryNames = getCategoryNames(tableDecName);
+            appendCategoriesSimple(colNames, labels, query, categoryNames);
+            query.append(") AND relative_width > ").append(minIntervalMult);
+            query.append(" AND -relative_diff > ").append(thresholdMult);
+            query.append(" AND value_name = '").append(valueName).append("'");
+            query.append(" LIMIT 1024;");
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
+            res.last();
+            List<SuspiciousInterval> intervals = new ArrayList<>();
+            res.beforeFirst();
+            List<Slice> slices = new ArrayList<>();
+            while(res.next() && intervals.size() <= maxIntervals * categoryNames.size()) {
+                int pos1 = res.getInt("pos1");
+                int pos2 = res.getInt("pos2");
+                if(!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
+                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices);
+                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
+                }
             }
             return intervals;
         } catch (SQLException ex) {
@@ -350,7 +521,7 @@ public class DatabaseService {
                     query.append(", ");
                 }
             }
-            query.append(", pos1, pos2, flatness_score, relative_width, relative_value_range");
+            query.append(", pos1, pos2, flatness_score, relative_width, relative_value_range, value_name");
             query.append(") VALUES (");
             for(int k = 0; k < intervals.size(); k++) {
                 SuspiciousInterval interval = intervals.get(k);
@@ -383,6 +554,7 @@ public class DatabaseService {
                 query.append(", ").append(interval.getFlatnessScore());
                 query.append(", ").append(interval.getRelativeWidth());
                 query.append(", ").append(interval.getRelativeValueRange() / interval.slice.getRelativeSigma());
+                query.append(", ").append("'").append(interval.slice.valueName).append("'");
                 if(k < intervals.size() - 1) {
                     query.append("),(");
                 }
@@ -400,6 +572,7 @@ public class DatabaseService {
      * отвечающих определенным требованиям.
      *
      * @param tableName - название таблицы
+     * @param valueName - название ряда данных
      * @param categoryCombos - сочетания названий столбцов таблицы
      * @param approximationType - тип приближения срезов
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
@@ -409,8 +582,9 @@ public class DatabaseService {
      *                        на всем разрезе, от 0 до 1)
      * @return список интервалов
      */
-    public List<SuspiciousInterval> getConstants(String tableName, List<String[]> categoryCombos, ApproximationType approximationType,
-                                                 double minIntervalMult, double thresholdMult) {
+    public List<SuspiciousInterval> getConstants(String tableName, String valueName, List<String[]> categoryCombos,
+                                                 ApproximationType approximationType, double minIntervalMult,
+                                                 double thresholdMult, int maxIntervals) {
         StringBuilder query = new StringBuilder();
         try {
             String tableDecName = tableName + "_constants";
@@ -419,15 +593,70 @@ public class DatabaseService {
             appendCategories(categoryCombos, query, categoryNames);
             query.append(") AND relative_width > ").append(minIntervalMult);
             query.append(" AND relative_value_range < ").append(thresholdMult);
+            query.append(" AND value_name = '").append(valueName).append("'");
             query.append(" LIMIT 1024;");
             ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
             res.last();
             List<SuspiciousInterval> intervals = new ArrayList<>();
             res.beforeFirst();
             List<Slice> slices = new ArrayList<>();
-            while(res.next()) {
-                Slice slice = matchSlice(tableName, approximationType, categoryNames, res, slices);
-                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2")));
+            while(res.next() && intervals.size() <= maxIntervals * categoryNames.size()) {
+                int pos1 = res.getInt("pos1");
+                int pos2 = res.getInt("pos2");
+                if(!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
+                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices);
+                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
+                }
+            }
+            return intervals;
+        } catch (SQLException ex) {
+            logger.logError("Не удалось получить интервалы с отсутствием роста по запросу: " + query);
+            handleSQLException(ex);
+        }
+        return new ArrayList<>();
+    }
+
+    /**
+     * Получает из таблицы интервалов с отсутствием изменений список интервалов, сгруппированных по определенным столбцам и
+     * отвечающих определенным требованиям. Работает при выборе интервалов из одного среза.
+     *
+     * @param tableName - название таблицы
+     * @param valueName - название ряда данных
+     * @param colNames - названия столбцов таблицы
+     * @param labels - значения столбцов таблицы
+     * @param approximationType - тип приближения срезов
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля разности между максимальным и минимальным значением
+     *                        на всем разрезе, от 0 до 1)
+     * @return список интервалов
+     */
+    public List<SuspiciousInterval> getConstantsSimple(String tableName, String valueName, String[] colNames, String[] labels,
+                                                       ApproximationType approximationType, double minIntervalMult,
+                                                       double thresholdMult, int maxIntervals) {
+        StringBuilder query = new StringBuilder();
+        try {
+            String tableDecName = tableName + "_constants";
+            query.append("SELECT * FROM ").append(tableDecName).append(" WHERE (");
+            List<String> categoryNames = getCategoryNames(tableDecName);
+            appendCategoriesSimple(colNames, labels, query, categoryNames);
+            query.append(") AND relative_width > ").append(minIntervalMult);
+            query.append(" AND relative_value_range < ").append(thresholdMult);
+            query.append(" AND value_name = '").append(valueName).append("'");
+            query.append(" LIMIT 1024;");
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
+            res.last();
+            List<SuspiciousInterval> intervals = new ArrayList<>();
+            res.beforeFirst();
+            List<Slice> slices = new ArrayList<>();
+            while(res.next() && intervals.size() <= maxIntervals * categoryNames.size()) {
+                int pos1 = res.getInt("pos1");
+                int pos2 = res.getInt("pos2");
+                if(!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
+                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices);
+                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
+                }
             }
             return intervals;
         } catch (SQLException ex) {
@@ -485,6 +714,33 @@ public class DatabaseService {
     }
 
     /**
+     * Добавляет к запросу получения интервалов список значений категорий в виде логического выражения. Работает при
+     * выборе интервалов из одного среза.
+     *
+     * @param colNames - названия столбцов таблицы
+     * @param labels - значения столбцов таблицы
+     * @param query - запрос
+     * @param categoryNames - названия столбцов
+     */
+    private void appendCategoriesSimple(String[] colNames, String[] labels, StringBuilder query, List<String> categoryNames) {
+        for(int k = 0; k < categoryNames.size(); k++) {
+            boolean categoryPresent = false;
+            for(int i = 0; i < colNames.length; i++) {
+                if(colNames[i].equals(categoryNames.get(k))) {
+                    query.append(colNames[i]).append(" = ").append(labels[i]);
+                    categoryPresent = true;
+                }
+            }
+            if(!categoryPresent) {
+                query.append(categoryNames.get(k)).append(" = '").append(labelNotPresent).append("'");
+            }
+            if(k < categoryNames.size() - 1) {
+                query.append(" AND ");
+            }
+        }
+    }
+
+    /**
      * Находит в списке или получает из базы данных срез, соответствующий строке из таблицы интервалов (совпадающий с ней
      * по значениям определенных категорий).
      *
@@ -495,7 +751,8 @@ public class DatabaseService {
      * @param slices - раннее найденные столбцы
      * @return новый или найденный срез
      */
-    private Slice matchSlice(String tableName, ApproximationType approximationType, List<String> categoryNames, ResultSet res, List<Slice> slices) throws SQLException {
+    private Slice matchSlice(String tableName, String valueName, ApproximationType approximationType,
+                             List<String> categoryNames, ResultSet res, List<Slice> slices) throws SQLException {
         List<String> labelsList = new ArrayList<>();
         List<String> colNamesList = new ArrayList<>();
         for (String categoryName : categoryNames) {
@@ -523,10 +780,41 @@ public class DatabaseService {
             }
         }
         if (slice == null) {
-            slice = getSlice(tableName, colNames, labels, approximationType).getAccumulation();
+            slice = getSlice(tableName, valueName, colNames, labels, approximationType).getAccumulation();
             slices.add(slice);
         }
         return slice;
+    }
+
+    private boolean intervalIntersects(List<SuspiciousInterval> intervals, List<String> categoryNames, ResultSet res,
+                                       int pos1, int pos2)  throws SQLException {
+        List<String> labelsList = new ArrayList<>();
+        for (String categoryName : categoryNames) {
+            if (!res.getString(categoryName).equals(labelNotPresent)) {
+                labelsList.add("'" + res.getString(categoryName) + "'");
+            }
+        }
+        for(SuspiciousInterval interval: intervals) {
+            if (interval.slice.labels.length != labelsList.size()) {
+                continue;
+            } else {
+                boolean intervalIntersects = true;
+                for (int i = 0; i < labelsList.size(); i++) {
+                    if (!interval.slice.labels[i].equals(labelsList.get(i))) {
+                        intervalIntersects = false;
+                    }
+                }
+                if(!intervalIntersects) {
+                    continue;
+                }
+            }
+            if((pos1 > interval.pos1 && pos1 < interval.pos2) || (pos2 > interval.pos1 && pos2 < interval.pos2) ||
+                    (interval.pos1 > pos1 && interval.pos1 < pos2) || (interval.pos2 > pos1 && interval.pos2 < pos2) ||
+                    (interval.pos1 == pos1 && interval.pos2 == pos2)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

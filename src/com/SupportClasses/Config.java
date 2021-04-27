@@ -35,7 +35,7 @@ public class Config {
                 if(!line.startsWith("//")) {
                     String[] lineSplit = line.split("=");
                     if(lineSplit.length == 2) {
-                        res.put(lineSplit[0], lineSplit[1]);
+                        res.putIfAbsent(lineSplit[0], lineSplit[1]);
                     }
                 }
                 line = lineReader.readLine();
@@ -50,6 +50,7 @@ public class Config {
         res.putIfAbsent("max_slices_per_combo", "16");
         res.putIfAbsent("max_categories_per_combo", "3");
         res.putIfAbsent("approximation_type", "linear");
+        res.putIfAbsent("viewer_type", "non-simple");
         return res;
     }
 
@@ -97,6 +98,10 @@ public class Config {
             default:
                 return ApproximationType.EMPTY;
         }
+    }
+
+    public boolean getViewerType() {
+        return config.get("viewer_type").equals("simple");
     }
 
 }

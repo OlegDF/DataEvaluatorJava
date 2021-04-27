@@ -41,7 +41,7 @@ public class GraphExporter {
         if(slice.points.length < 2) {
             return false;
         }
-        StringBuilder directoryName = new StringBuilder("graphs/" + currentDate.getTime() + "/" + slice.tableName + "/accumulated/");
+        StringBuilder directoryName = new StringBuilder("graphs/" + currentDate.getTime() + "/" + slice.tableName + "/accumulated_" + slice.valueName + "/");
         for(int i = 0; i < slice.colNames.length; i++) {
             directoryName.append(slice.colNames[i]);
             if(i < slice.colNames.length - 1) {
@@ -89,7 +89,7 @@ public class GraphExporter {
         }
         StringBuilder chartTitle = new StringBuilder();
         StringBuilder directoryName = new StringBuilder("graphs/" + currentDate.getTime() + "/" + slice.tableName +
-                "/" + subdirectory + "/");
+                "/" + subdirectory + "_" + slice.valueName + "/");
         StringBuilder imageName = new StringBuilder(directoryName).append(intervalId).append("_");
         for(int i = 0; i < slice.colNames.length; i++) {
             chartTitle.append(slice.labels[i]);
@@ -125,8 +125,9 @@ public class GraphExporter {
     public JFreeChart getGraph(Slice slice) {
         String chartTitle = getChartTitle(slice);
         TimeSeries series = new TimeSeries("Значение");
-        for(SlicePoint point: slice.points) {
-            series.add(new Millisecond(point.date), point.value * point.amount);
+        final int chunkLength = Integer.max(slice.points.length / 4096, 1);
+        for(int i = 0; i < slice.points.length; i += chunkLength) {
+            series.add(new Millisecond(slice.points[i].date), slice.points[i].value * slice.points[i].amount);
         }
         TimeSeriesCollection dataset = new TimeSeriesCollection();
         dataset.addSeries(series);
@@ -151,15 +152,16 @@ public class GraphExporter {
         Slice slice = interval.slice;
         String chartTitle = getChartTitle(slice);
         TimeSeries mainSeries = new TimeSeries("Значение");
-        for(int i = 0; i <= interval.pos1; i++) {
+        final int chunkLength = Integer.max(slice.points.length / 4096, 1);
+        for(int i = 0; i <= interval.pos1; i += chunkLength) {
             mainSeries.add(new Millisecond(slice.points[i].date), slice.points[i].value * slice.points[i].amount);
         }
         TimeSeries decreaseSeries = new TimeSeries("Интервал с уменьшением");
-        for(int i = interval.pos1; i <= interval.pos2; i++) {
+        for(int i = interval.pos1; i <= interval.pos2; i += chunkLength) {
             decreaseSeries.add(new Millisecond(slice.points[i].date), slice.points[i].value * slice.points[i].amount);
         }
         TimeSeries mainSeries2 = new TimeSeries("Значение");
-        for(int i = interval.pos2; i < slice.points.length; i++) {
+        for(int i = interval.pos2; i < slice.points.length; i += chunkLength) {
             mainSeries2.add(new Millisecond(slice.points[i].date), slice.points[i].value * slice.points[i].amount);
         }
         TimeSeriesCollection dataset = new TimeSeriesCollection();
@@ -172,22 +174,20 @@ public class GraphExporter {
         }
         JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, "Date", "Value", dataset);
         XYPlot plot = (XYPlot) chart.getPlot();
-        plot.getRangeAxis().setAutoRangeMinimumSize(slice.valueRange);
+        plot.getRangeAxis().setRange(plot.getRangeAxis().getRange().getLowerBound(), plot.getRangeAxis().getRange().getLowerBound() + slice.valueRange * 1.5);
         plot.getRenderer().setSeriesPaint(0, new Color(0, 0, 192));
         plot.getRenderer().setSeriesPaint(1, new Color(255, 0, 0));
         plot.getRenderer().setSeriesPaint(2, new Color(0, 0, 192));
-        plot.getRenderer().setSeriesPaint(3, new Color(128, 255, 192));
-        plot.getRenderer().setSeriesPaint(4, new Color(128, 255, 192));
+        plot.getRenderer().setSeriesPaint(3, new Color(64, 192, 192));
+        plot.getRenderer().setSeriesPaint(4, new Color(64, 192, 192));
         if(interval.hasPartialApproximation()) {
-            plot.getRenderer().setSeriesPaint(5, new Color(255, 32, 255));
-            plot.getRenderer().setSeriesPaint(6, new Color(255, 32, 255));
+            plot.getRenderer().setSeriesPaint(5, new Color(32, 192, 64));
+            plot.getRenderer().setSeriesPaint(6, new Color(32, 192, 64));
         }
         plot.getRenderer().setSeriesVisibleInLegend(2, Boolean.FALSE, true);
         plot.getRenderer().setSeriesVisibleInLegend(3, Boolean.FALSE, true);
-        plot.getRenderer().setSeriesVisibleInLegend(4, Boolean.FALSE, true);
         if(interval.hasPartialApproximation()) {
             plot.getRenderer().setSeriesVisibleInLegend(5, Boolean.FALSE, true);
-            plot.getRenderer().setSeriesVisibleInLegend(6, Boolean.FALSE, true);
         }
         return chart;
     }
@@ -199,9 +199,10 @@ public class GraphExporter {
      * @param dataset - набор данных, в который вставляются линии
      */
     private void addApproximation(Slice slice, TimeSeriesCollection dataset) {
-        TimeSeries approximationLower = new TimeSeries("Нижняя граница");
-        TimeSeries approximationUpper = new TimeSeries("Верхняя граница");
-        for(int i = 0; i < slice.points.length; i++) {
+        TimeSeries approximationLower = new TimeSeries("Приближение");
+        TimeSeries approximationUpper = new TimeSeries("Приближение");
+        final int chunkLength = Integer.max(slice.points.length / 4096, 1);
+        for(int i = 0; i < slice.points.length; i += chunkLength) {
             approximationLower.add(new TimeSeriesDataItem(new Millisecond(slice.points[i].date),
                     slice.getApproximate(i) - slice.getSigma()));
             approximationUpper.add(new TimeSeriesDataItem(new Millisecond(slice.points[i].date),
@@ -219,9 +220,10 @@ public class GraphExporter {
      * @param dataset - набор данных, в который вставляются линии
      */
     private void addPartialApproximation(SuspiciousInterval interval, TimeSeriesCollection dataset) {
-        TimeSeries approximationLower = new TimeSeries("Нижняя граница");
-        TimeSeries approximationUpper = new TimeSeries("Верхняя граница");
-        for(int i = 0; i < interval.slice.points.length; i++) {
+        TimeSeries approximationLower = new TimeSeries("Частичное приближение");
+        TimeSeries approximationUpper = new TimeSeries("Частичное приближение");
+        final int chunkLength = Integer.max(interval.slice.points.length / 4096, 1);
+        for(int i = 0; i < interval.slice.points.length; i += chunkLength) {
             approximationLower.add(new TimeSeriesDataItem(new Millisecond(interval.slice.points[i].date),
                     interval.getPartialApproximate(i) - interval.getPartialSigma()));
             approximationUpper.add(new TimeSeriesDataItem(new Millisecond(interval.slice.points[i].date),

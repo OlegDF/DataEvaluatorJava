@@ -31,8 +31,6 @@ public class DataController {
     private String tableName;
     private int maxCategoriesPerCombo, maxSlicesPerCombo;
 
-    private List<Slice> slicesCache = null;
-
     public DataController() {
         config = new Config();
         logger = new ConsoleLogger();
@@ -57,20 +55,20 @@ public class DataController {
     public void exportGraphsAccumulated() {
         logger.logMessage("Начинается экспорт графиков...");
         List<Slice> slices;
-        if(slicesCache == null) {
-            slicesCache = sliceRetriever.getSlicesAccumulated(tableName, maxCategoriesPerCombo, maxSlicesPerCombo);
-        }
-        slices = slicesCache;
-        int graphsExported = 0;
-        for(Slice slice: slices) {
-            if(graphExporter.exportGraphToPng(slice)) {
-                graphsExported++;
+        List<String> valueNames = dbService.getValueNames(tableName);
+        for(String valueName: valueNames) {
+            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo);
+            int graphsExported = 0;
+            for(Slice slice: slices) {
+                if(graphExporter.exportGraphToPng(slice)) {
+                    graphsExported++;
+                }
+                if(graphsExported % (slices.size() / 10) == 0) {
+                    logger.logMessage("Экспортировано " + graphsExported + " графиков");
+                }
             }
-            if(graphsExported % (slices.size() / 10) == 0) {
-                logger.logMessage("Экспортировано " + graphsExported + " графиков");
-            }
+            logger.logMessage("Экспортировано " + graphsExported + " графиков");
         }
-        logger.logMessage("Экспортировано " + graphsExported + " графиков");
         logger.logMessage("Закончился экспорт графиков.");
     }
 
@@ -88,24 +86,24 @@ public class DataController {
     public void exportDecreaseGraphs(double minIntervalMult, double thresholdMult, int maxIntervals) {
         logger.logMessage("Начинается экспорт графиков уменьшения...");
         List<Slice> slices;
-        if(slicesCache == null) {
-            slicesCache = sliceRetriever.getSlicesAccumulated(tableName, maxCategoriesPerCombo, maxSlicesPerCombo);
-        }
-        slices = slicesCache;
-        int intervalsExported = 0;
-        List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slices, minIntervalMult, thresholdMult,
-                maxIntervals, true);
-        int intervalId = 0;
-        for(SuspiciousInterval interval: intervals) {
-            if(graphExporter.exportDecreaseGraphToPng(interval, "decreases", intervalId)) {
-                intervalsExported++;
+        List<String> valueNames = dbService.getValueNames(tableName);
+        for(String valueName: valueNames) {
+            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo);
+            int intervalsExported = 0;
+            List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slices, minIntervalMult, thresholdMult,
+                    maxIntervals, true);
+            int intervalId = 0;
+            for(SuspiciousInterval interval: intervals) {
+                if(graphExporter.exportDecreaseGraphToPng(interval, "decreases", intervalId)) {
+                    intervalsExported++;
+                }
+                intervalId++;
+                if(intervalsExported % (intervals.size() / 10) == 0) {
+                    logger.logMessage("Экспортировано " + intervalsExported + " графиков");
+                }
             }
-            intervalId++;
-            if(intervalsExported % (intervals.size() / 10) == 0) {
-                logger.logMessage("Экспортировано " + intervalsExported + " графиков");
-            }
+            logger.logMessage("Экспортировано " + intervalsExported + " графиков");
         }
-        logger.logMessage("Экспортировано " + intervalsExported + " графиков");
         logger.logMessage("Закончился экспорт графиков уменьшения.");
     }
 
@@ -123,24 +121,24 @@ public class DataController {
     public void exportConstantGraphs(double minIntervalMult, double thresholdMult, int maxIntervals) {
         logger.logMessage("Начинается экспорт графиков отсутствия роста...");
         List<Slice> slices;
-        if(slicesCache == null) {
-            slicesCache = sliceRetriever.getSlicesAccumulated(tableName, maxCategoriesPerCombo, maxSlicesPerCombo);
-        }
-        slices = slicesCache;
-        int intervalsExported = 0;
-        List<SuspiciousInterval> intervals = intervalFinder.getConstantIntervals(slices, minIntervalMult, thresholdMult,
-                maxIntervals, true);
-        int intervalId = 0;
-        for(SuspiciousInterval interval: intervals) {
-            if(graphExporter.exportDecreaseGraphToPng(interval, "constants", intervalId)) {
-                intervalsExported++;
+        List<String> valueNames = dbService.getValueNames(tableName);
+        for(String valueName: valueNames) {
+            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo);
+            int intervalsExported = 0;
+            List<SuspiciousInterval> intervals = intervalFinder.getConstantIntervals(slices, minIntervalMult, thresholdMult,
+                    maxIntervals, true);
+            int intervalId = 0;
+            for(SuspiciousInterval interval: intervals) {
+                if(graphExporter.exportDecreaseGraphToPng(interval, "constants", intervalId)) {
+                    intervalsExported++;
+                }
+                intervalId++;
+                if(intervalsExported % (intervals.size() / 10) == 0) {
+                    logger.logMessage("Экспортировано " + intervalsExported + " графиков");
+                }
             }
-            intervalId++;
-            if(intervalsExported % (intervals.size() / 10) == 0) {
-                logger.logMessage("Экспортировано " + intervalsExported + " графиков");
-            }
+            logger.logMessage("Экспортировано " + intervalsExported + " графиков");
         }
-        logger.logMessage("Экспортировано " + intervalsExported + " графиков");
         logger.logMessage("Закончился экспорт графиков отсутствия роста.");
     }
 
@@ -149,12 +147,14 @@ public class DataController {
      */
     public void createDecreasesTable() {
         List<String> categoryNames = dbService.getCategoryNames(tableName);
-        final String[] colNames = new String[categoryNames.size() + 5];
-        final String[] colTypes = new String[categoryNames.size() + 5];
+        final String[] colNames = new String[categoryNames.size() + 6];
+        final String[] colTypes = new String[categoryNames.size() + 6];
         for(int i = 0; i < categoryNames.size(); i++) {
             colNames[i] = categoryNames.get(i);
             colTypes[i] = "varchar(255)";
         }
+        colNames[colNames.length - 6] = "value_name";
+        colTypes[colNames.length - 6] = "varchar(255)";
         colNames[colNames.length - 5] = "pos1";
         colTypes[colNames.length - 5] = "int8";
         colNames[colNames.length - 4] = "pos2";
@@ -183,14 +183,14 @@ public class DataController {
         logger.logMessage("Начинается экспорт интервалов уменьшения...");
         String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
         List<Slice> slices;
-        if(slicesCache == null) {
-            slicesCache = sliceRetriever.getSlicesAccumulated(tableName, maxCategoriesPerCombo, maxSlicesPerCombo);
+        List<String> valueNames = dbService.getValueNames(tableName);
+        for(String valueName: valueNames) {
+            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo);
+            List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slices, minIntervalMult, thresholdMult,
+                    maxIntervals, false);
+            dbService.insertDecrease(tableName + "_decreases", colNames, intervals);
+            logger.logMessage("Экспортировано " + intervals.size() + " интервалов");
         }
-        slices = slicesCache;
-        List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slices, minIntervalMult, thresholdMult,
-                maxIntervals, false);
-        dbService.insertDecrease(tableName + "_decreases", colNames, intervals);
-        logger.logMessage("Экспортировано " + intervals.size() + " интервалов");
         logger.logMessage("Закончился экспорт интервалов уменьшения.");
     }
 
@@ -199,12 +199,14 @@ public class DataController {
      */
     public void createConstantsTable() {
         List<String> categoryNames = dbService.getCategoryNames(tableName);
-        final String[] colNames = new String[categoryNames.size() + 5];
-        final String[] colTypes = new String[categoryNames.size() + 5];
+        final String[] colNames = new String[categoryNames.size() + 6];
+        final String[] colTypes = new String[categoryNames.size() + 6];
         for(int i = 0; i < categoryNames.size(); i++) {
             colNames[i] = categoryNames.get(i);
             colTypes[i] = "varchar(255)";
         }
+        colNames[colNames.length - 6] = "value_name";
+        colTypes[colNames.length - 6] = "varchar(255)";
         colNames[colNames.length - 5] = "pos1";
         colTypes[colNames.length - 5] = "int8";
         colNames[colNames.length - 4] = "pos2";
@@ -233,14 +235,14 @@ public class DataController {
         logger.logMessage("Начинается экспорт интервалов отсутствия роста...");
         String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
         List<Slice> slices;
-        if(slicesCache == null) {
-            slicesCache = sliceRetriever.getSlicesAccumulated(tableName, maxCategoriesPerCombo, maxSlicesPerCombo);
+        List<String> valueNames = dbService.getValueNames(tableName);
+        for(String valueName: valueNames) {
+            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo);
+            List<SuspiciousInterval> intervals = intervalFinder.getConstantIntervals(slices, minIntervalMult, thresholdMult,
+                    maxIntervals, false);
+            dbService.insertConstant(tableName + "_constants", colNames, intervals);
+            logger.logMessage("Экспортировано " + intervals.size() + " интервалов");
         }
-        slices = slicesCache;
-        List<SuspiciousInterval> intervals = intervalFinder.getConstantIntervals(slices, minIntervalMult, thresholdMult,
-                maxIntervals, false);
-        dbService.insertConstant(tableName + "_constants", colNames, intervals);
-        logger.logMessage("Экспортировано " + intervals.size() + " интервалов");
         logger.logMessage("Закончился экспорт интервалов отсутствия роста.");
     }
 

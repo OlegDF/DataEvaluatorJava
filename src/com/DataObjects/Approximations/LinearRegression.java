@@ -70,4 +70,8 @@ public class LinearRegression implements Approximation {
         sigma = varianceSum;
     }
 
+    @Override
+    public double getAngleMultiplier(Slice slice) {
+        return approximationAngle;
+    }
 }

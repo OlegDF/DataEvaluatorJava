@@ -10,7 +10,7 @@ public class MainExportDecreasesToDB {
 
         dataController.createDecreasesTable();
 
-        dataController.exportDecreasesToDB(0.05, 0.1, Integer.MAX_VALUE);
+        dataController.exportDecreasesToDB(0.05, 0.5, Integer.MAX_VALUE);
 
         dataController.createConstantsTable();
 

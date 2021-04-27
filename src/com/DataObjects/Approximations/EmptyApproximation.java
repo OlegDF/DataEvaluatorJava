@@ -24,4 +24,10 @@ public class EmptyApproximation implements Approximation {
         return ApproximationType.EMPTY;
     }
 
+    @Override
+    public double getAngleMultiplier(Slice slice) {
+        return (double)(slice.points[slice.points.length - 1].value - slice.points[0].value) / slice.dateRange;
+    }
+
+
 }
