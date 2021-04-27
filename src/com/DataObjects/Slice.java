@@ -13,6 +13,7 @@ import java.util.List;
 public class Slice {
 
     public final String tableName;
+    public final String valueName;
     public final String[] colNames;
     public final String[] labels;
     public final SlicePoint[] points;
@@ -26,8 +27,9 @@ public class Slice {
      * @param colNames - названия столбцов, по которым создается разрез
      * @param labels - значения соответствующих столбцов
      */
-    public Slice(String tableName, String[] colNames, String[] labels) {
+    public Slice(String tableName, String valueName, String[] colNames, String[] labels) {
         this.tableName = tableName;
+        this.valueName = valueName;
         this.colNames = colNames;
         this.labels = labels;
         this.points = new SlicePoint[0];
@@ -46,8 +48,9 @@ public class Slice {
      * @param points - список точек разреза
      * @param approximationType - тип функции приближения
      */
-    public Slice(String tableName, String[] colNames, String[] labels, SlicePoint[] points, ApproximationType approximationType) {
+    public Slice(String tableName, String valueName, String[] colNames, String[] labels, SlicePoint[] points, ApproximationType approximationType) {
         this.tableName = tableName;
+        this.valueName = valueName;
         this.colNames = colNames;
         this.labels = labels;
         this.points = points;
@@ -91,7 +94,7 @@ public class Slice {
             }
             pointsTruncated.add(newPoint);
         }
-        return new Slice(tableName, colNames, labels, pointsTruncated.toArray(new SlicePoint[0]), approximation.getType());
+        return new Slice(tableName, valueName, colNames, labels, pointsTruncated.toArray(new SlicePoint[0]), approximation.getType());
     }
 
     /**
@@ -103,7 +106,9 @@ public class Slice {
      * @return true, если уменьшение достаточно велико, иначе false
      */
     public boolean isIntervalDecreasing(int pos1, int pos2, long threshold) {
-        return points[pos2].value * points[pos2].amount - points[pos1].value * points[pos1].amount < -threshold;
+        double decrease = points[pos2].value * points[pos2].amount - points[pos1].value * points[pos1].amount -
+                getApproximate(pos2) + getApproximate(pos1);
+        return decrease < -threshold;
     }
 
     /**

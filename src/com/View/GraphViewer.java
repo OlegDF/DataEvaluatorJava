@@ -43,6 +43,7 @@ public class GraphViewer {
 
     private final JComboBox<String> tableBox;
     private final JComboBox<String> interfaceTypeBox;
+    private final JComboBox<String> valueBox;
     private final JComboBox<String> graphTypeBox;
 
     private final JComboBox<String>[] colNameBoxes;
@@ -73,7 +74,7 @@ public class GraphViewer {
     private String tableName;
     private ApproximationType approximationType;
     private List<SuspiciousInterval> decreaseIntervals;
-    private List<JFreeChart> currentGraphs;
+    private List<ChartPanel> currentGraphs;
     private int currentInterval;
 
     /**
@@ -123,6 +124,7 @@ public class GraphViewer {
 
         graphTypeBox = new JComboBox<>();
         tableBox = new JComboBox<>();
+        valueBox = new JComboBox<>();
         interfaceTypeBox = new JComboBox<>();
         initializeInterface(tableName);
         setupWindow();
@@ -162,6 +164,7 @@ public class GraphViewer {
             if(simpleMode) {
                 fillCategoryBoxes();
             }
+            fillValueBoxes();
         });
         JLabel tableLabel = new JLabel();
         tableLabel.setText("Название таблицы: ");
@@ -194,17 +197,26 @@ public class GraphViewer {
 
         graphTypeBox.addItem("уменьшение");
         graphTypeBox.addItem("отсутствие роста");
-        setSize(graphTypeBox, 150, 30);
+        setSize(graphTypeBox, 120, 30);
         graphTypeBox.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel graphTypeLabel = new JLabel();
         graphTypeLabel.setText("Тип графиков: ");
-        setSize(graphTypeLabel, 150, 30);
+        setSize(graphTypeLabel, 120, 30);
+
+        fillValueBoxes();
+        setSize(valueBox, 120, 30);
+        valueBox.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel valueLabel = new JLabel();
+        valueLabel.setText("Ряд данных: ");
+        setSize(valueLabel, 120, 30);
 
         JPanel graphTypePanel = new JPanel();
-        setSize(graphTypePanel, 420, 30);
+        setSize(graphTypePanel, 600, 30);
         graphTypePanel.add(graphTypeLabel, constraints);
         graphTypePanel.add(graphTypeBox, constraints);
+        graphTypePanel.add(valueLabel, constraints);
+        graphTypePanel.add(valueBox, constraints);
 
         buttonsPanel.add(tablePanel, constraints);
         buttonsPanel.add(graphTypePanel, constraints);
@@ -263,6 +275,15 @@ public class GraphViewer {
                 }
             });
         }
+    }
+
+    private void fillValueBoxes() {
+        List<String> valueNames = dbService.getValueNames(tableName);
+        valueBox.removeAllItems();
+        for(String value: valueNames) {
+            valueBox.addItem(value);
+        }
+        valueBox.setSelectedIndex(0);
     }
 
     /**
@@ -415,7 +436,7 @@ public class GraphViewer {
         currentGraphs = new ArrayList<>();
         currentInterval = 0;
         if(decreaseIntervals.size() > 0) {
-            currentGraphs.add(graphExporter.getDecreaseChart(decreaseIntervals.get(0)));
+            currentGraphs.add(new ChartPanel(graphExporter.getDecreaseChart(decreaseIntervals.get(0))));
             drawGraph();
         } else {
             displayLackOfGraphs();
@@ -465,24 +486,23 @@ public class GraphViewer {
                 labels = labelsNew;
             }
         }
-        System.out.println(colNames.toString());
-        System.out.println(labels.size());
         if(colNames.size() <= 0) {
             return false;
         }
         decreaseIntervals = new ArrayList<>();
+        String valueName = (String)valueBox.getSelectedItem();
         for(String[] labelsCombo: labels) {
             switch(graphTypeBox.getSelectedIndex()) {
                 case 0:
                     logger.logMessage("Начинается получение графиков уменьшения...");
-                    decreaseIntervals.addAll(dbService.getDecreasesSimple(tableName, colNames.toArray(new String[0]),
-                            labelsCombo, approximationType, getMinInterval(), getThreshold()));
+                    decreaseIntervals.addAll(dbService.getDecreasesSimple(tableName, valueName, colNames.toArray(new String[0]),
+                            labelsCombo, approximationType, getMinInterval(), getThreshold(), maxGraphsSlider.getValue()));
                     logger.logMessage("Закончено получение графиков уменьшения.");
                     break;
                 case 1:
                     logger.logMessage("Начинается получение графиков отсутствия роста...");
-                    decreaseIntervals.addAll(dbService.getConstantsSimple(tableName, colNames.toArray(new String[0]),
-                            labelsCombo, approximationType, getMinInterval(), getThreshold()));
+                    decreaseIntervals.addAll(dbService.getConstantsSimple(tableName, valueName, colNames.toArray(new String[0]),
+                            labelsCombo, approximationType, getMinInterval(), getThreshold(), maxGraphsSlider.getValue()));
                     logger.logMessage("Закончено получение графиков отсутствия роста.");
                     break;
             }
@@ -500,17 +520,18 @@ public class GraphViewer {
                 categoryCombos.addCategory(categoryNames);
             }
         }
+        String valueName = (String)valueBox.getSelectedItem();
         switch(graphTypeBox.getSelectedIndex()) {
             case 0:
                 logger.logMessage("Начинается получение графиков уменьшения...");
-                decreaseIntervals = dbService.getDecreases(tableName, categoryCombosFinal, approximationType,
-                        getMinInterval(), getThreshold());
+                decreaseIntervals = dbService.getDecreases(tableName, valueName, categoryCombosFinal, approximationType,
+                        getMinInterval(), getThreshold(), maxGraphsSlider.getValue());
                 logger.logMessage("Закончено получение графиков уменьшения.");
                 break;
             case 1:
                 logger.logMessage("Начинается получение графиков отсутствия роста...");
-                decreaseIntervals = dbService.getConstants(tableName, categoryCombosFinal, approximationType,
-                        getMinInterval(), getThreshold());
+                decreaseIntervals = dbService.getConstants(tableName, valueName, categoryCombosFinal, approximationType,
+                        getMinInterval(), getThreshold(), maxGraphsSlider.getValue());
                 logger.logMessage("Закончено получение графиков отсутствия роста.");
                 break;
         }
@@ -522,9 +543,9 @@ public class GraphViewer {
     private void drawGraph() {
         ChartPanel chartPanel;
         if(currentInterval >= currentGraphs.size()) {
-            currentGraphs.add(graphExporter.getDecreaseChart(decreaseIntervals.get(currentInterval)));
+            currentGraphs.add(new ChartPanel(graphExporter.getDecreaseChart(decreaseIntervals.get(currentInterval))));
         }
-        chartPanel = new ChartPanel(currentGraphs.get(currentInterval));
+        chartPanel = currentGraphs.get(currentInterval);
         setSize(chartPanel, 600, 400);
         graphPanel.removeAll();
         graphPanel.add(chartPanel);

@@ -21,6 +21,7 @@ class SliceTest {
         logger = new ConsoleLogger();
         logger.logMessage("Начинается тест объекта среза...");
         final String tableName = "data_test";
+        final String valueName = "value_1";
         final String[] colNames = {"category_1", "category_2"};
         final String[] labels = {"type_1", "source_1"};
         final SlicePoint[] points = new SlicePoint[5];
@@ -29,14 +30,14 @@ class SliceTest {
         points[2] = new SlicePoint(-200, 4, new Date(10030));
         points[3] = new SlicePoint(50, 20, new Date(10040));
         points[4] = new SlicePoint(250, 2, new Date(10050));
-        upwardSlice = new Slice(tableName, colNames, labels, points, ApproximationType.LINEAR);
+        upwardSlice = new Slice(tableName, valueName, colNames, labels, points, ApproximationType.LINEAR);
         final SlicePoint[] pointsAccumulated = new SlicePoint[5];
         pointsAccumulated[0] = new SlicePoint(500, 1, new Date(10000));
         pointsAccumulated[1] = new SlicePoint(950, 1, new Date(10010));
         pointsAccumulated[2] = new SlicePoint(150, 1, new Date(10030));
         pointsAccumulated[3] = new SlicePoint(1150, 1, new Date(10040));
         pointsAccumulated[4] = new SlicePoint(1650, 1, new Date(10050));
-        upwardSliceAccumulated = new Slice(tableName, colNames, labels, pointsAccumulated, ApproximationType.LINEAR);
+        upwardSliceAccumulated = new Slice(tableName, valueName, colNames, labels, pointsAccumulated, ApproximationType.LINEAR);
     }
 
     @AfterAll
@@ -86,6 +87,7 @@ class SliceTest {
     @Test
     void equals() {
         final String tableName = "data_test";
+        final String valueName = "value_1";
         final String[] colNames = {"category_1", "category_2"};
         final String[] labels = {"type_1", "source_1"};
         final SlicePoint[] points = new SlicePoint[5];
@@ -94,7 +96,7 @@ class SliceTest {
         points[2] = new SlicePoint(-200, 4, new Date(10030));
         points[3] = new SlicePoint(50, 20, new Date(10040));
         points[4] = new SlicePoint(250, 2, new Date(10050));
-        Slice upwardSliceSecond = new Slice(tableName, colNames, labels, points, ApproximationType.LINEAR);
+        Slice upwardSliceSecond = new Slice(tableName, valueName, colNames, labels, points, ApproximationType.LINEAR);
         assertEquals(upwardSlice, upwardSliceSecond);
         assertNotEquals(upwardSliceAccumulated, upwardSliceSecond);
     }

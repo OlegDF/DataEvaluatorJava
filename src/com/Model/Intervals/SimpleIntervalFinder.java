@@ -40,11 +40,13 @@ public class SimpleIntervalFinder implements IntervalFinder {
                 SuspiciousInterval newInterval = null;
                 for(int pos2 = pos1 + chunkLength; pos2 < slice.points.length; pos2 += chunkLength) {
                     if(slice.isIntervalDecreasing(pos1, pos2, threshold) && slice.getDateDistance(pos1, pos2) >= minIntervalLength) {
-                        SuspiciousInterval secondInterval = new SuspiciousInterval(slice, pos1, pos2, 0.05);
                         if(newInterval == null) {
-                            newInterval = secondInterval;
-                        } else if(secondInterval.getDecreaseScore() > newInterval.getDecreaseScore()) {
-                            newInterval = secondInterval;
+                            newInterval = new SuspiciousInterval(slice, pos1, pos2, 0.05);
+                        } else {
+                            SuspiciousInterval secondInterval = new SuspiciousInterval(newInterval, pos2);
+                            if(secondInterval.getDecreaseScore() > newInterval.getDecreaseScore()) {
+                                newInterval = secondInterval;
+                            }
                         }
                     }
                 }
@@ -85,7 +87,14 @@ public class SimpleIntervalFinder implements IntervalFinder {
                 SuspiciousInterval newInterval = null;
                 for(int pos2 = pos1 + chunkLength; pos2 < slice.points.length; pos2 += chunkLength) {
                     if(slice.isIntervalConstant(pos1, pos2, threshold) && slice.getDateDistance(pos1, pos2) >= minIntervalLength) {
-                        newInterval = new SuspiciousInterval(slice, pos1, pos2, 0.05);
+                        if(newInterval == null) {
+                            newInterval = new SuspiciousInterval(slice, pos1, pos2, 0.05);
+                        } else {
+                            SuspiciousInterval secondInterval = new SuspiciousInterval(newInterval, pos2);
+                            if(secondInterval.getFlatnessScore() > newInterval.getFlatnessScore()) {
+                                newInterval = secondInterval;
+                            }
+                        }
                     }
                 }
                 if(newInterval != null) {

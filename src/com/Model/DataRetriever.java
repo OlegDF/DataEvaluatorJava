@@ -6,7 +6,9 @@ import com.SupportClasses.Logger;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.sql.Date;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -80,7 +82,7 @@ public class DataRetriever {
 
         final Pattern intPattern = Pattern.compile("-?\\d+");
         final Pattern floatPattern = Pattern.compile("-?\\d+(\\.\\d+)?");
-        final Pattern timestampPattern = Pattern.compile("\\d{4}-\\d{2}-\\d{2} ");
+        final Pattern timestampPattern = Pattern.compile("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} *");
 
         for(int i = 0; i < firstRow.length; i++) {
             if(intPattern.matcher(firstRow[i]).matches()) {

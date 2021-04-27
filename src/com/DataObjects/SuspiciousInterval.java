@@ -19,9 +19,16 @@ public class SuspiciousInterval {
         this.partialApproximation = getPartialApproximation(minStartDate);
     }
 
+    public SuspiciousInterval(SuspiciousInterval originalInterval, int newPos2) {
+        this.slice = originalInterval.slice;
+        this.pos1 = originalInterval.pos1;
+        this.pos2 = newPos2;
+        this.partialApproximation = originalInterval.partialApproximation;
+    }
+
     /**
      * Вычисляет меру уменьшения значения на интервале, равную квадрату отношения разности крайних значений интервала к
-     * ширине интервала и среднеквадратичному отклонению отрезка. Также, если перед интервалом находится не менее 20%
+     * ширине интервала и среднеквадратичному отклонению отрезка. Также, если перед интервалом находится не менее 5%
      * среза, а последняя точка интервала имеет значительно меньшее значение, чем функция приближения первой части
      * среза в этой же точке, то мера уменьшения увеличивается.
      *
@@ -31,19 +38,22 @@ public class SuspiciousInterval {
         if(pos1 < 0 || pos1 >= slice.points.length || pos2 < 0 || pos2 >= slice.points.length) {
             return -1;
         }
-        double res = getRelativeDiff() * getRelativeDiff() / (getRelativeWidth() * getRelativeWidth());
+        double res = Math.sqrt(slice.dateRange) * getRelativeDiff() * getRelativeDiff();
+        if(getRelativeWidth() != 0) {
+            //res /= getRelativeWidth();
+        }
         double relativeSigma = slice.getSigma() / slice.valueRange;
         if(relativeSigma != 0) {
             res /= relativeSigma;
         }
-        res = getComparisonToApproximation(res);
+        //res = getComparisonToApproximation(res);
         res = compareApproximations(res);
         return res;
     }
 
     /**
      * Вычисляет меру значимости интервала без увеличения, равную его ширине. Также, если перед интервалом находится не
-     * менее 20% среза, а последняя точка интервала имеет значительно меньшее значение, чем функция приближения первой
+     * менее 5% среза, а последняя точка интервала имеет значительно меньшее значение, чем функция приближения первой
      * части среза в этой же точке, то мера уменьшения увеличивается.
      *
      * @return меру значимости интервала
@@ -139,7 +149,7 @@ public class SuspiciousInterval {
      * @return отношение разностей значений (ожидаемые значения - между -1 и 1)
      */
     public double getRelativeDiff() {
-        return (double)(slice.points[pos2].value - slice.points[pos1].value) / (slice.valueRange);
+        return (double)(slice.points[pos2].value - slice.points[pos1].value - slice.getApproximate(pos2) + slice.getApproximate(pos1)) / (slice.valueRange);
     }
 
     /**

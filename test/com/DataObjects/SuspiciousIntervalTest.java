@@ -24,6 +24,7 @@ class SuspiciousIntervalTest {
         logger = new ConsoleLogger();
         logger.logMessage("Начинается тест объекта интервала...");
         final String tableName = "data_test";
+        final String valueName = "value_1";
         final String[] colNames = {"category_1", "category_2"};
         final String[] labels = {"type_1", "source_1"};
         final SlicePoint[] pointsAccumulated = new SlicePoint[5];
@@ -32,7 +33,7 @@ class SuspiciousIntervalTest {
         pointsAccumulated[2] = new SlicePoint(150, 1, new Date(10030));
         pointsAccumulated[3] = new SlicePoint(1150, 1, new Date(10040));
         pointsAccumulated[4] = new SlicePoint(1650, 1, new Date(10050));
-        upwardSlice = new Slice(tableName, colNames, labels, pointsAccumulated, ApproximationType.LINEAR);
+        upwardSlice = new Slice(tableName, valueName, colNames, labels, pointsAccumulated, ApproximationType.LINEAR);
         interval1 = new SuspiciousInterval(upwardSlice, 1, 2, 0.05);
         interval2 = new SuspiciousInterval(upwardSlice, 0, 2, 0.05);
         interval3 = new SuspiciousInterval(upwardSlice, 2, 4, 0.05);

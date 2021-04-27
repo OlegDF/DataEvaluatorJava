@@ -122,12 +122,13 @@ public class DatabaseService {
      * Получает разрез - набор данных, в которых один или более столбцов равны заданным значениям.
      *
      * @param tableName - название таблицы
+     * @param valueName - название ряда данных
      * @param colNames - названия столбцов, по которым отбираются данные
      * @param labels - значения в соответствующих столбцах в строковом виде
      * @param approximationType - тип функции приближения
      * @return объект-разрез
      */
-    public Slice getSlice(String tableName, String[] colNames, String[] labels, ApproximationType approximationType) {
+    public Slice getSlice(String tableName, String valueName, String[] colNames, String[] labels, ApproximationType approximationType) {
         StringBuilder query = new StringBuilder();
         try {
             query.append("SELECT * FROM ").append(tableName).append(" WHERE ");
@@ -146,15 +147,15 @@ public class DatabaseService {
             res.beforeFirst();
             int i = 0;
             while(res.next()) {
-                points[i] = new SlicePoint(res.getLong("value_1"), res.getLong("amount"), res.getTimestamp("first_date"));
+                points[i] = new SlicePoint(res.getLong(valueName), res.getLong("amount"), res.getTimestamp("first_date"));
                 i++;
             }
-            return new Slice(tableName, colNames, labels, points, approximationType);
+            return new Slice(tableName, valueName, colNames, labels, points, approximationType);
         } catch (SQLException ex) {
             logger.logError("Не удалось получить разрез по запросу: " + query);
             handleSQLException(ex);
         }
-        return new Slice(tableName, colNames, labels);
+        return new Slice(tableName, valueName, colNames, labels);
     }
 
     /**
@@ -285,6 +286,34 @@ public class DatabaseService {
     }
 
     /**
+     * Получает список названий столбцов с рядами данных.
+     *
+     * @param tableName - название таблицы
+     * @return список столбцов в строковом виде
+     */
+    public List<String> getValueNames(String tableName) {
+        String query = "";
+        try {
+            query = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "' ORDER BY column_name;";
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query);
+            res.last();
+            List<String> categoryNames = new ArrayList<>();
+            res.beforeFirst();
+            while(res.next()) {
+                String colName = res.getString("column_name");
+                if(colName.startsWith("value_")) {
+                    categoryNames.add(colName);
+                }
+            }
+            return categoryNames;
+        } catch (SQLException ex) {
+            logger.logError("Не удалось получить список столбцов по запросу: " + query);
+            handleSQLException(ex);
+        }
+        return new ArrayList<>();
+    }
+
+    /**
      * Получает список названий таблиц с исходными данными.
      *
      * @return список столбцов в строковом виде
@@ -329,7 +358,7 @@ public class DatabaseService {
                     query.append(", ");
                 }
             }
-            query.append(", pos1, pos2, decrease_score, relative_width, relative_diff");
+            query.append(", pos1, pos2, decrease_score, relative_width, relative_diff, value_name");
             query.append(") VALUES (");
             for(int k = 0; k < intervals.size(); k++) {
                 SuspiciousInterval interval = intervals.get(k);
@@ -362,6 +391,7 @@ public class DatabaseService {
                 query.append(", ").append(interval.getDecreaseScore());
                 query.append(", ").append(interval.getRelativeWidth());
                 query.append(", ").append(interval.getRelativeDiff() / interval.slice.getRelativeSigma());
+                query.append(", ").append("'").append(interval.slice.valueName).append("'");
                 if(k < intervals.size() - 1) {
                     query.append("),(");
                 }
@@ -379,6 +409,7 @@ public class DatabaseService {
      * отвечающих определенным требованиям.
      *
      * @param tableName - название таблицы
+     * @param valueName - название ряда данных
      * @param categoryCombos - сочетания названий столбцов таблицы
      * @param approximationType - тип приближения срезов
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
@@ -388,8 +419,9 @@ public class DatabaseService {
      *                        на всем разрезе, от 0 до 1)
      * @return список интервалов
      */
-    public List<SuspiciousInterval> getDecreases(String tableName, List<String[]> categoryCombos, ApproximationType approximationType,
-                                                 double minIntervalMult, double thresholdMult) {
+    public List<SuspiciousInterval> getDecreases(String tableName, String valueName, List<String[]> categoryCombos,
+                                                 ApproximationType approximationType, double minIntervalMult,
+                                                 double thresholdMult, int maxIntervals) {
         StringBuilder query = new StringBuilder();
         try {
             String tableDecName = tableName + "_decreases";
@@ -398,15 +430,20 @@ public class DatabaseService {
             appendCategories(categoryCombos, query, categoryNames);
             query.append(") AND relative_width > ").append(minIntervalMult);
             query.append(" AND -relative_diff > ").append(thresholdMult);
+            query.append(" AND value_name = '").append(valueName).append("'");
             query.append(" LIMIT 1024;");
             ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
             res.last();
             List<SuspiciousInterval> intervals = new ArrayList<>();
             res.beforeFirst();
             List<Slice> slices = new ArrayList<>();
-            while(res.next()) {
-                Slice slice = matchSlice(tableName, approximationType, categoryNames, res, slices);
-                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2"), 0.05));
+            while(res.next() && intervals.size() <= maxIntervals * categoryNames.size()) {
+                int pos1 = res.getInt("pos1");
+                int pos2 = res.getInt("pos2");
+                if(!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
+                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices);
+                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
+                }
             }
             return intervals;
         } catch (SQLException ex) {
@@ -421,6 +458,7 @@ public class DatabaseService {
      * отвечающих определенным требованиям. Работает при выборе интервалов из одного среза.
      *
      * @param tableName - название таблицы
+     * @param valueName - название ряда данных
      * @param colNames - названия столбцов таблицы
      * @param labels - значения столбцов таблицы
      * @param approximationType - тип приближения срезов
@@ -431,8 +469,9 @@ public class DatabaseService {
      *                        на всем разрезе, от 0 до 1)
      * @return список интервалов
      */
-    public List<SuspiciousInterval> getDecreasesSimple(String tableName, String[] colNames, String[] labels, ApproximationType approximationType,
-                                                 double minIntervalMult, double thresholdMult) {
+    public List<SuspiciousInterval> getDecreasesSimple(String tableName, String valueName, String[] colNames, String[] labels,
+                                                       ApproximationType approximationType, double minIntervalMult,
+                                                       double thresholdMult, int maxIntervals) {
         StringBuilder query = new StringBuilder();
         try {
             String tableDecName = tableName + "_decreases";
@@ -441,15 +480,20 @@ public class DatabaseService {
             appendCategoriesSimple(colNames, labels, query, categoryNames);
             query.append(") AND relative_width > ").append(minIntervalMult);
             query.append(" AND -relative_diff > ").append(thresholdMult);
+            query.append(" AND value_name = '").append(valueName).append("'");
             query.append(" LIMIT 1024;");
             ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
             res.last();
             List<SuspiciousInterval> intervals = new ArrayList<>();
             res.beforeFirst();
             List<Slice> slices = new ArrayList<>();
-            while(res.next()) {
-                Slice slice = matchSlice(tableName, approximationType, categoryNames, res, slices);
-                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2"), 0.05));
+            while(res.next() && intervals.size() <= maxIntervals * categoryNames.size()) {
+                int pos1 = res.getInt("pos1");
+                int pos2 = res.getInt("pos2");
+                if(!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
+                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices);
+                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
+                }
             }
             return intervals;
         } catch (SQLException ex) {
@@ -477,7 +521,7 @@ public class DatabaseService {
                     query.append(", ");
                 }
             }
-            query.append(", pos1, pos2, flatness_score, relative_width, relative_value_range");
+            query.append(", pos1, pos2, flatness_score, relative_width, relative_value_range, value_name");
             query.append(") VALUES (");
             for(int k = 0; k < intervals.size(); k++) {
                 SuspiciousInterval interval = intervals.get(k);
@@ -510,6 +554,7 @@ public class DatabaseService {
                 query.append(", ").append(interval.getFlatnessScore());
                 query.append(", ").append(interval.getRelativeWidth());
                 query.append(", ").append(interval.getRelativeValueRange() / interval.slice.getRelativeSigma());
+                query.append(", ").append("'").append(interval.slice.valueName).append("'");
                 if(k < intervals.size() - 1) {
                     query.append("),(");
                 }
@@ -527,6 +572,7 @@ public class DatabaseService {
      * отвечающих определенным требованиям.
      *
      * @param tableName - название таблицы
+     * @param valueName - название ряда данных
      * @param categoryCombos - сочетания названий столбцов таблицы
      * @param approximationType - тип приближения срезов
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
@@ -536,8 +582,9 @@ public class DatabaseService {
      *                        на всем разрезе, от 0 до 1)
      * @return список интервалов
      */
-    public List<SuspiciousInterval> getConstants(String tableName, List<String[]> categoryCombos, ApproximationType approximationType,
-                                                 double minIntervalMult, double thresholdMult) {
+    public List<SuspiciousInterval> getConstants(String tableName, String valueName, List<String[]> categoryCombos,
+                                                 ApproximationType approximationType, double minIntervalMult,
+                                                 double thresholdMult, int maxIntervals) {
         StringBuilder query = new StringBuilder();
         try {
             String tableDecName = tableName + "_constants";
@@ -546,15 +593,20 @@ public class DatabaseService {
             appendCategories(categoryCombos, query, categoryNames);
             query.append(") AND relative_width > ").append(minIntervalMult);
             query.append(" AND relative_value_range < ").append(thresholdMult);
+            query.append(" AND value_name = '").append(valueName).append("'");
             query.append(" LIMIT 1024;");
             ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
             res.last();
             List<SuspiciousInterval> intervals = new ArrayList<>();
             res.beforeFirst();
             List<Slice> slices = new ArrayList<>();
-            while(res.next()) {
-                Slice slice = matchSlice(tableName, approximationType, categoryNames, res, slices);
-                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2"), 0.05));
+            while(res.next() && intervals.size() <= maxIntervals * categoryNames.size()) {
+                int pos1 = res.getInt("pos1");
+                int pos2 = res.getInt("pos2");
+                if(!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
+                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices);
+                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
+                }
             }
             return intervals;
         } catch (SQLException ex) {
@@ -569,6 +621,7 @@ public class DatabaseService {
      * отвечающих определенным требованиям. Работает при выборе интервалов из одного среза.
      *
      * @param tableName - название таблицы
+     * @param valueName - название ряда данных
      * @param colNames - названия столбцов таблицы
      * @param labels - значения столбцов таблицы
      * @param approximationType - тип приближения срезов
@@ -579,8 +632,9 @@ public class DatabaseService {
      *                        на всем разрезе, от 0 до 1)
      * @return список интервалов
      */
-    public List<SuspiciousInterval> getConstantsSimple(String tableName, String[] colNames, String[] labels, ApproximationType approximationType,
-                                                 double minIntervalMult, double thresholdMult) {
+    public List<SuspiciousInterval> getConstantsSimple(String tableName, String valueName, String[] colNames, String[] labels,
+                                                       ApproximationType approximationType, double minIntervalMult,
+                                                       double thresholdMult, int maxIntervals) {
         StringBuilder query = new StringBuilder();
         try {
             String tableDecName = tableName + "_constants";
@@ -589,15 +643,20 @@ public class DatabaseService {
             appendCategoriesSimple(colNames, labels, query, categoryNames);
             query.append(") AND relative_width > ").append(minIntervalMult);
             query.append(" AND relative_value_range < ").append(thresholdMult);
+            query.append(" AND value_name = '").append(valueName).append("'");
             query.append(" LIMIT 1024;");
             ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
             res.last();
             List<SuspiciousInterval> intervals = new ArrayList<>();
             res.beforeFirst();
             List<Slice> slices = new ArrayList<>();
-            while(res.next()) {
-                Slice slice = matchSlice(tableName, approximationType, categoryNames, res, slices);
-                intervals.add(new SuspiciousInterval(slice, res.getInt("pos1"), res.getInt("pos2"), 0.05));
+            while(res.next() && intervals.size() <= maxIntervals * categoryNames.size()) {
+                int pos1 = res.getInt("pos1");
+                int pos2 = res.getInt("pos2");
+                if(!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
+                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices);
+                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
+                }
             }
             return intervals;
         } catch (SQLException ex) {
@@ -692,7 +751,8 @@ public class DatabaseService {
      * @param slices - раннее найденные столбцы
      * @return новый или найденный срез
      */
-    private Slice matchSlice(String tableName, ApproximationType approximationType, List<String> categoryNames, ResultSet res, List<Slice> slices) throws SQLException {
+    private Slice matchSlice(String tableName, String valueName, ApproximationType approximationType,
+                             List<String> categoryNames, ResultSet res, List<Slice> slices) throws SQLException {
         List<String> labelsList = new ArrayList<>();
         List<String> colNamesList = new ArrayList<>();
         for (String categoryName : categoryNames) {
@@ -720,10 +780,41 @@ public class DatabaseService {
             }
         }
         if (slice == null) {
-            slice = getSlice(tableName, colNames, labels, approximationType).getAccumulation();
+            slice = getSlice(tableName, valueName, colNames, labels, approximationType).getAccumulation();
             slices.add(slice);
         }
         return slice;
+    }
+
+    private boolean intervalIntersects(List<SuspiciousInterval> intervals, List<String> categoryNames, ResultSet res,
+                                       int pos1, int pos2)  throws SQLException {
+        List<String> labelsList = new ArrayList<>();
+        for (String categoryName : categoryNames) {
+            if (!res.getString(categoryName).equals(labelNotPresent)) {
+                labelsList.add("'" + res.getString(categoryName) + "'");
+            }
+        }
+        for(SuspiciousInterval interval: intervals) {
+            if (interval.slice.labels.length != labelsList.size()) {
+                continue;
+            } else {
+                boolean intervalIntersects = true;
+                for (int i = 0; i < labelsList.size(); i++) {
+                    if (!interval.slice.labels[i].equals(labelsList.get(i))) {
+                        intervalIntersects = false;
+                    }
+                }
+                if(!intervalIntersects) {
+                    continue;
+                }
+            }
+            if((pos1 > interval.pos1 && pos1 < interval.pos2) || (pos2 > interval.pos1 && pos2 < interval.pos2) ||
+                    (interval.pos1 > pos1 && interval.pos1 < pos2) || (interval.pos2 > pos1 && interval.pos2 < pos2) ||
+                    (interval.pos1 == pos1 && interval.pos2 == pos2)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }
