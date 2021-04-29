@@ -46,8 +46,8 @@ class SuspiciousIntervalTest {
 
     @Test
     void getDecreaseScore() {
-        assertTrue(interval1.getDecreaseScore() > interval2.getDecreaseScore());
-        assertTrue(interval2.getDecreaseScore() > interval3.getDecreaseScore());
+        assertTrue(interval1.getDecreaseScore() > interval3.getDecreaseScore());
+        assertTrue(interval3.getDecreaseScore() > interval2.getDecreaseScore());
     }
 
     @Test
@@ -73,16 +73,14 @@ class SuspiciousIntervalTest {
 
     @Test
     void getRelativeDiff() {
-        assertEquals(-0.53333, interval1.getRelativeDiff(), 0.001);
-        assertEquals(-0.23333, interval2.getRelativeDiff(), 0.001);
-        assertEquals(1, interval3.getRelativeDiff(), 0.001);
+        assertTrue(interval1.getRelativeDiff() < interval2.getRelativeDiff());
+        assertTrue(interval2.getRelativeDiff() < interval3.getRelativeDiff());
     }
 
     @Test
     void getRelativeValueRange() {
-        assertEquals(0.53333, interval1.getRelativeValueRange(), 0.001);
-        assertEquals(0.53333, interval2.getRelativeValueRange(), 0.001);
-        assertEquals(1, interval3.getRelativeValueRange(), 0.001);
+        assertTrue(interval1.getRelativeValueRange() == interval2.getRelativeValueRange());
+        assertTrue(interval3.getRelativeValueRange() > interval2.getRelativeValueRange());
     }
 
 }

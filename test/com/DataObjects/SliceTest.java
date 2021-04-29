@@ -59,7 +59,7 @@ class SliceTest {
     @Test
     void isIntervalDecreasing() {
         assertTrue(upwardSliceAccumulated.isIntervalDecreasing(1, 2, 100));
-        assertFalse(upwardSliceAccumulated.isIntervalDecreasing(1, 2, 1000));
+        assertFalse(upwardSliceAccumulated.isIntervalDecreasing(1, 2, 100000));
         assertFalse(upwardSliceAccumulated.isIntervalDecreasing(0, 4, 100));
     }
 
