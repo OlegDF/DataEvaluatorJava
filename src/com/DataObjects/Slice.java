@@ -207,6 +207,14 @@ public class Slice {
         return approximation.getAngleMultiplier(this);
     }
 
+    public SlicePoint getFirstPoint() {
+        return points[0];
+    }
+
+    public SlicePoint getLastPoint() {
+        return points[points.length - 1];
+    }
+
     /**
      * Получает разность между максимальным и минимальным значениями на разрезе.
      *

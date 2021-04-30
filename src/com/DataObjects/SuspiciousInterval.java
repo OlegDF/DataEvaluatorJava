@@ -184,6 +184,14 @@ public class SuspiciousInterval {
         return partialApproximation != null;
     }
 
+    public SlicePoint getFirstPoint() {
+        return slice.points[pos1];
+    }
+
+    public SlicePoint getLastPoint() {
+        return slice.points[pos2];
+    }
+
     /**
      * Получает функцию приближения относительно начальной части среза, от первой точки среза до первой точки данного
      * интервала Получает частичное приближение, только если рассматриваемая начальная часть среза имеет достаточную длину.

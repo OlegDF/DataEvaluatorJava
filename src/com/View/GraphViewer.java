@@ -9,7 +9,6 @@ import com.Model.Intervals.IntervalFinder;
 import com.Model.Intervals.SimpleIntervalFinder;
 import com.SupportClasses.ConsoleLogger;
 import com.SupportClasses.Logger;
-import org.jfree.chart.JFreeChart;
 import org.jfree.chart.swing.ChartPanel;
 
 import javax.swing.*;
@@ -60,6 +59,7 @@ public class GraphViewer {
     private final JLabel maxGraphsNumber;
 
     private final JLabel graphsUnavailableText;
+    private final JTextArea graphSummaryText;
 
     private final int minIntervalSliderWidth = 45, thresholdSliderWidth = 59;
     private final double minIntervalLowerLimit = 0.05, minIntervalUpperLimit = 0.5;
@@ -76,6 +76,8 @@ public class GraphViewer {
     private List<SuspiciousInterval> decreaseIntervals;
     private List<ChartPanel> currentGraphs;
     private int currentInterval;
+
+    private SwingWorker<Void, Void> intervalRetrievalWorker;
 
     /**
      * Создает окно, получающее интервалы из определенной таблицы.
@@ -118,6 +120,7 @@ public class GraphViewer {
         maxGraphsNumber = new JLabel();
 
         graphsUnavailableText = new JLabel();
+        graphSummaryText = new JTextArea();
 
         simpleModePanels = new ArrayList<>();
         regularModePanels = new ArrayList<>();
@@ -157,7 +160,7 @@ public class GraphViewer {
                 tableBox.setSelectedItem(table);
             }
         }
-        setSize(tableBox, 120, 30);
+        setSize(tableBox, 120, 20);
         tableBox.setAlignmentX(Component.CENTER_ALIGNMENT);
         tableBox.addItemListener(e -> {
             tableName = (String)tableBox.getSelectedItem();
@@ -168,12 +171,12 @@ public class GraphViewer {
         });
         JLabel tableLabel = new JLabel();
         tableLabel.setText("Название таблицы: ");
-        setSize(tableLabel, 120, 30);
+        setSize(tableLabel, 120, 20);
 
         interfaceTypeBox.addItem("перебор комбинаций категорий");
         interfaceTypeBox.addItem("выбор среза");
         interfaceTypeBox.setSelectedIndex(simpleMode ? 1 : 0);
-        setSize(interfaceTypeBox, 120, 30);
+        setSize(interfaceTypeBox, 120, 20);
         interfaceTypeBox.setAlignmentX(Component.CENTER_ALIGNMENT);
         interfaceTypeBox.addItemListener(e -> {
             simpleMode = interfaceTypeBox.getSelectedIndex() != 0;
@@ -186,10 +189,10 @@ public class GraphViewer {
         });
         JLabel interfaceTypeLabel = new JLabel();
         interfaceTypeLabel.setText("Режим работы: ");
-        setSize(interfaceTypeLabel, 120, 30);
+        setSize(interfaceTypeLabel, 120, 20);
 
         JPanel tablePanel = new JPanel();
-        setSize(tablePanel, 600, 30);
+        setSize(tablePanel, 600, 25);
         tablePanel.add(tableLabel, constraints);
         tablePanel.add(tableBox, constraints);
         tablePanel.add(interfaceTypeLabel, constraints);
@@ -197,22 +200,22 @@ public class GraphViewer {
 
         graphTypeBox.addItem("уменьшение");
         graphTypeBox.addItem("отсутствие роста");
-        setSize(graphTypeBox, 120, 30);
+        setSize(graphTypeBox, 120, 20);
         graphTypeBox.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel graphTypeLabel = new JLabel();
         graphTypeLabel.setText("Тип графиков: ");
-        setSize(graphTypeLabel, 120, 30);
+        setSize(graphTypeLabel, 120, 20);
 
         fillValueBoxes();
-        setSize(valueBox, 120, 30);
+        setSize(valueBox, 120, 20);
         valueBox.setAlignmentX(Component.CENTER_ALIGNMENT);
         JLabel valueLabel = new JLabel();
         valueLabel.setText("Ряд данных: ");
-        setSize(valueLabel, 120, 30);
+        setSize(valueLabel, 120, 20);
 
         JPanel graphTypePanel = new JPanel();
-        setSize(graphTypePanel, 600, 30);
+        setSize(graphTypePanel, 600, 25);
         graphTypePanel.add(graphTypeLabel, constraints);
         graphTypePanel.add(graphTypeBox, constraints);
         graphTypePanel.add(valueLabel, constraints);
@@ -229,17 +232,17 @@ public class GraphViewer {
      */
     private void initializeCategoryBoxes(GridBagConstraints constraints) {
         for(int i = 0; i < colNameBoxes.length; i++) {
-            setSize(colNameBoxes[i], 150, 30);
+            setSize(colNameBoxes[i], 150, 20);
             colNameBoxes[i].setAlignmentX(Component.CENTER_ALIGNMENT);
-            setSize(labelBoxes[i], 150, 30);
+            setSize(labelBoxes[i], 150, 20);
             labelBoxes[i].setAlignmentX(Component.CENTER_ALIGNMENT);
 
             JLabel colNameLabel = new JLabel();
             colNameLabel.setText("Категория " + (i + 1) + ":");
-            setSize(colNameLabel, 150, 30);
+            setSize(colNameLabel, 150, 20);
 
             JPanel colNamePanel = new JPanel();
-            setSize(colNamePanel, 600, 30);
+            setSize(colNamePanel, 600, 25);
             colNamePanel.add(colNameLabel, constraints);
             colNamePanel.add(colNameBoxes[i], constraints);
             colNamePanel.add(labelBoxes[i], constraints);
@@ -328,7 +331,7 @@ public class GraphViewer {
                                     ChangeListener listener, String labelText, GridBagConstraints constraints) {
         slider.setMinimum(sliderMin);
         slider.setMaximum(sliderMax);
-        setSize(slider, 200, 30);
+        setSize(slider, 200, 20);
         slider.addChangeListener(listener);
         slider.setValue(sliderMin);
         slider.setValue(sliderMax);
@@ -336,12 +339,12 @@ public class GraphViewer {
 
         JLabel sliderLabel = new JLabel();
         sliderLabel.setText(labelText);
-        setSize(sliderLabel, 250, 30);
+        setSize(sliderLabel, 250, 20);
 
-        setSize(sliderNumber, 100, 30);
+        setSize(sliderNumber, 100, 20);
 
         JPanel sliderPanel = new JPanel();
-        setSize(sliderPanel, 600, 30);
+        setSize(sliderPanel, 600, 25);
         sliderPanel.add(sliderLabel, constraints);
         sliderPanel.add(slider, constraints);
         sliderPanel.add(sliderNumber, constraints);
@@ -358,23 +361,43 @@ public class GraphViewer {
         startCalculationButton.setText("Получить графики");
         setSize(startCalculationButton, 200, 30);
         startCalculationButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        startCalculationButton.addActionListener(e -> getIntervals());
+        startCalculationButton.addActionListener(e -> {
+            lockInterface();
+            intervalRetrievalWorker = new SwingWorker<>() {
+                @Override
+                protected Void doInBackground() {
+                    getIntervals();
+                    return null;
+                }
+                @Override
+                public void done() {
+                    if(decreaseIntervals.size() > 0) {
+                        currentGraphs.add(new ChartPanel(graphExporter.getDecreaseChart(decreaseIntervals.get(0))));
+                        drawGraph();
+                    } else {
+                        displayLackOfGraphs();
+                    }
+                    unlockInterface();
+                }
+            };
+            intervalRetrievalWorker.execute();
+        });
         buttonsPanel.add(startCalculationButton, constraints);
 
         graphLeftButton.setText("<");
-        graphLeftButton.setFont(new Font("Arial", Font.BOLD, 32));
-        setSize(graphLeftButton, 70, 40);
+        graphLeftButton.setFont(new Font("Arial", Font.BOLD, 28));
+        setSize(graphLeftButton, 70, 30);
         graphLeftButton.addActionListener(e -> moveGraphLeft());
 
         graphRightButton.setText(">");
-        graphRightButton.setFont(new Font("Arial", Font.BOLD, 32));
-        setSize(graphRightButton, 70, 40);
+        graphRightButton.setFont(new Font("Arial", Font.BOLD, 28));
+        setSize(graphRightButton, 70, 30);
         graphRightButton.addActionListener(e -> moveGraphRight());
 
         currentGraphNumber.setFont(new Font("Arial", Font.PLAIN, 24));
-        setSize(currentGraphNumber, 90, 40);
+        setSize(currentGraphNumber, 90, 30);
 
-        setSize(leftRightButtonsPanel, 300, 50);
+        setSize(leftRightButtonsPanel, 300, 35);
         leftRightButtonsPanel.add(graphLeftButton);
         leftRightButtonsPanel.add(currentGraphNumber);
         leftRightButtonsPanel.add(graphRightButton);
@@ -391,14 +414,17 @@ public class GraphViewer {
         graphsUnavailableText.setBackground(new Color(238, 238, 238));
         graphsUnavailableText.setVerticalAlignment(SwingConstants.CENTER);
         graphsUnavailableText.setHorizontalAlignment(SwingConstants.CENTER);
+
+        graphSummaryText.setFont(new Font("Arial", Font.PLAIN, 14));
+        setSize(graphSummaryText, 600, 70);
     }
 
     /**
      * Создает составные части окна, одна из которых содержит кнопки с параметрами интервалов, а другая - собственно граф.
      */
     private void initializePanels() {
-        setSize(buttonsPanel, 600, 300);
-        setSize(graphPanel, 600, 480);
+        setSize(buttonsPanel, 600, 230);
+        setSize(graphPanel, 600, 550);
         buttonsPanel.setLayout(new BoxLayout(buttonsPanel, BoxLayout.Y_AXIS));
 
         mainFrame.add(buttonsPanel);
@@ -435,12 +461,7 @@ public class GraphViewer {
         }
         currentGraphs = new ArrayList<>();
         currentInterval = 0;
-        if(decreaseIntervals.size() > 0) {
-            currentGraphs.add(new ChartPanel(graphExporter.getDecreaseChart(decreaseIntervals.get(0))));
-            drawGraph();
-        } else {
-            displayLackOfGraphs();
-        }
+        unlockInterface();
     }
 
     private boolean getGraphsSimple() {
@@ -537,6 +558,42 @@ public class GraphViewer {
         }
     }
 
+    private void lockInterface() {
+        for(JComboBox box: colNameBoxes) {
+            box.setEnabled(false);
+        }
+        for(JComboBox box: labelBoxes) {
+            box.setEnabled(false);
+        }
+        tableBox.setEnabled(false);
+        valueBox.setEnabled(false);
+        graphTypeBox.setEnabled(false);
+        interfaceTypeBox.setEnabled(false);
+        maxCategoriesSlider.setEnabled(false);
+        maxGraphsSlider.setEnabled(false);
+        minIntervalMultSlider.setEnabled(false);
+        thresholdMultSlider.setEnabled(false);
+        startCalculationButton.setEnabled(false);
+    }
+
+    private void unlockInterface() {
+        for(JComboBox box: colNameBoxes) {
+            box.setEnabled(true);
+        }
+        for(JComboBox box: labelBoxes) {
+            box.setEnabled(true);
+        }
+        tableBox.setEnabled(true);
+        valueBox.setEnabled(true);
+        graphTypeBox.setEnabled(true);
+        interfaceTypeBox.setEnabled(true);
+        maxCategoriesSlider.setEnabled(true);
+        maxGraphsSlider.setEnabled(true);
+        minIntervalMultSlider.setEnabled(true);
+        thresholdMultSlider.setEnabled(true);
+        startCalculationButton.setEnabled(true);
+    }
+
     /**
      * Отображает график под текущим выбранным номером.
      */
@@ -546,9 +603,11 @@ public class GraphViewer {
             currentGraphs.add(new ChartPanel(graphExporter.getDecreaseChart(decreaseIntervals.get(currentInterval))));
         }
         chartPanel = currentGraphs.get(currentInterval);
+        fillGraphSummary();
         setSize(chartPanel, 600, 400);
         graphPanel.removeAll();
         graphPanel.add(chartPanel);
+        graphPanel.add(graphSummaryText);
         graphPanel.add(leftRightButtonsPanel);
         graphLeftButton.setVisible(currentInterval > 0);
         graphRightButton.setVisible(currentInterval < decreaseIntervals.size() - 1);
@@ -556,6 +615,21 @@ public class GraphViewer {
         graphPanel.revalidate();
         mainFrame.revalidate();
         mainFrame.repaint();
+    }
+
+    private void fillGraphSummary() {
+        SuspiciousInterval interval = decreaseIntervals.get(currentInterval);
+        StringBuilder graphSummary = new StringBuilder();
+        graphSummary.append("Даты среза: от ").append(interval.slice.getFirstPoint().date.toString()).
+                append(" до ").append(interval.slice.getLastPoint().date.toString()).append("\n");
+        graphSummary.append("Даты интервала: от ").append(interval.getFirstPoint().date.toString()).
+                append(" до ").append(interval.getLastPoint().date.toString()).append("\n");
+        graphSummary.append("Значения среза: в начале ").append(interval.slice.getFirstPoint().value * interval.slice.getFirstPoint().amount).
+                append(", в конце ").append(interval.slice.getLastPoint().value * interval.slice.getLastPoint().amount).append("\n");
+        graphSummary.append("Значения интервала: в начале ").append(interval.getFirstPoint().value * interval.getFirstPoint().amount).
+                append(", в конце ").append(interval.getLastPoint().value * interval.getLastPoint().amount);
+        graphSummaryText.setText(graphSummary.toString());
+        graphSummaryText.setEditable(false);
     }
 
     /**
