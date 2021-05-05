@@ -473,7 +473,7 @@ public class DatabaseService {
                 Date maxDate = res.getTimestamp("max_date");
                 if (!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
                     Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices, minDate, maxDate);
-                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
+                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.2));
                 }
             }
             return intervals;
@@ -525,7 +525,7 @@ public class DatabaseService {
                 Date maxDate = res.getTimestamp("max_date");
                 if (!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
                     Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices, minDate, maxDate);
-                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
+                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.2));
                 }
             }
             return intervals;
@@ -642,7 +642,7 @@ public class DatabaseService {
                 Date maxDate = res.getTimestamp("max_date");
                 if (!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
                     Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices, minDate, maxDate);
-                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
+                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.2));
                 }
             }
             return intervals;
@@ -694,7 +694,7 @@ public class DatabaseService {
                 Date maxDate = res.getTimestamp("max_date");
                 if (!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
                     Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices, minDate, maxDate);
-                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
+                    intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.2));
                 }
             }
             return intervals;

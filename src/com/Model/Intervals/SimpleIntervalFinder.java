@@ -42,7 +42,7 @@ public class SimpleIntervalFinder implements IntervalFinder {
                 for (int pos2 = pos1 + chunkLength; pos2 < slice.points.length; pos2 += chunkLength) {
                     if (slice.isIntervalDecreasing(pos1, pos2, threshold) && slice.getDateDistance(pos1, pos2) >= minIntervalLength) {
                         if (newInterval == null) {
-                            newInterval = new SuspiciousInterval(slice, pos1, pos2, 0.05);
+                            newInterval = new SuspiciousInterval(slice, pos1, pos2, 0.2);
                         } else {
                             SuspiciousInterval secondInterval = new SuspiciousInterval(newInterval, pos2);
                             if (secondInterval.getDecreaseScore() > newInterval.getDecreaseScore()) {
@@ -89,7 +89,7 @@ public class SimpleIntervalFinder implements IntervalFinder {
                 for (int pos2 = pos1 + chunkLength; pos2 < slice.points.length; pos2 += chunkLength) {
                     if (slice.isIntervalConstant(pos1, pos2, threshold) && slice.getDateDistance(pos1, pos2) >= minIntervalLength) {
                         if (newInterval == null) {
-                            newInterval = new SuspiciousInterval(slice, pos1, pos2, 0.05);
+                            newInterval = new SuspiciousInterval(slice, pos1, pos2, 0.2);
                         } else {
                             SuspiciousInterval secondInterval = new SuspiciousInterval(newInterval, pos2);
                             if (secondInterval.getFlatnessScore() > newInterval.getFlatnessScore()) {

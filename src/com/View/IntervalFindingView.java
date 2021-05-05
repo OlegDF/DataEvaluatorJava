@@ -33,6 +33,7 @@ public class IntervalFindingView {
     private final JButton startCsvParsingButton;
     private final JButton startIntervalRetrievalButton;
 
+    private int dateSliderWidth = 600;
     private long dateLowerLimit, dateUpperLimit;
     private Date firstDate, lastDate;
 
@@ -109,10 +110,12 @@ public class IntervalFindingView {
         tableBox.addItemListener(e -> {
             tableName = (String) tableBox.getSelectedItem();
             getFirstLastDate();
-            minDateSlider.setMaximum((int) (dateUpperLimit - dateLowerLimit));
+            minDateSlider.setMaximum(dateSliderWidth);
             minDateSlider.setValue(0);
-            maxDateSlider.setMaximum((int) (dateUpperLimit - dateLowerLimit));
-            maxDateSlider.setValue((int) (dateUpperLimit - dateLowerLimit));
+            minDateNumber.setText(getMinDate().toString());
+            maxDateSlider.setMaximum(dateSliderWidth);
+            maxDateSlider.setValue(dateSliderWidth);
+            maxDateNumber.setText(getMaxDate().toString());
         });
         JLabel tableLabel = new JLabel();
         tableLabel.setText("Название таблицы: ");
@@ -133,33 +136,33 @@ public class IntervalFindingView {
      * @param constraints - параметры расположения элементов в окне
      */
     private void initializeSliders(GridBagConstraints constraints) {
-        initializeSlider(minDateSlider, 0, dateUpperLimit - dateLowerLimit, 0, minDateNumber,
+        initializeSlider(minDateSlider, 0, dateSliderWidth, 0, minDateNumber,
                 e -> {
                     if (minDateSlider.getValue() > maxDateSlider.getValue()) {
                         minDateSlider.setValue(maxDateSlider.getValue());
                     }
-                    minDateNumber.setText(new Date(dateLowerLimit + minDateSlider.getValue()).toString());
+                    minDateNumber.setText(getMinDate().toString());
                 },
                 "Первая дата интервала: ", constraints);
-        initializeSlider(maxDateSlider, 0, dateUpperLimit - dateLowerLimit, dateUpperLimit - dateLowerLimit, maxDateNumber,
+        initializeSlider(maxDateSlider, 0, dateSliderWidth, dateSliderWidth, maxDateNumber,
                 e -> {
                     if (maxDateSlider.getValue() < minDateSlider.getValue()) {
                         maxDateSlider.setValue(minDateSlider.getValue());
                     }
-                    maxDateNumber.setText(new Date(dateLowerLimit + maxDateSlider.getValue()).toString());
+                    maxDateNumber.setText(getMaxDate().toString());
                 },
                 "Последняя дата интервала: ", constraints);
     }
 
-    private void initializeSlider(JSlider slider, long sliderMin, long sliderMax, long initialValue, JLabel sliderNumber,
+    private void initializeSlider(JSlider slider, int sliderMin, int sliderMax, int initialValue, JLabel sliderNumber,
                                   ChangeListener listener, String labelText, GridBagConstraints constraints) {
-        slider.setMinimum((int) sliderMin);
-        slider.setMaximum((int) sliderMax);
+        slider.setMinimum(sliderMin);
+        slider.setMaximum(sliderMax);
         setSize(slider, 150, 20);
         slider.addChangeListener(listener);
-        slider.setValue((int) sliderMin);
-        slider.setValue((int) sliderMax);
-        slider.setValue((int) initialValue);
+        slider.setValue(sliderMin);
+        slider.setValue(sliderMax);
+        slider.setValue(initialValue);
 
         JLabel sliderLabel = new JLabel();
         sliderLabel.setText(labelText);
@@ -220,10 +223,10 @@ public class IntervalFindingView {
                     dataController.setTableName(tableName);
                     dataController.createDecreasesTable();
                     dataController.exportDecreasesToDB(0.05, 0.5, Integer.MAX_VALUE,
-                            new Date(dateLowerLimit + minDateSlider.getValue()), new Date(dateLowerLimit + maxDateSlider.getValue()));
+                            getMinDate(), getMaxDate());
                     dataController.createConstantsTable();
                     dataController.exportConstantsToDB(0.05, 1, Integer.MAX_VALUE,
-                            new Date(dateLowerLimit + minDateSlider.getValue()), new Date(dateLowerLimit + maxDateSlider.getValue()));
+                            getMinDate(), getMaxDate());
                     return null;
                 }
 
@@ -296,6 +299,14 @@ public class IntervalFindingView {
         component.setMinimumSize(new Dimension(x, y));
         component.setPreferredSize(new Dimension(x, y));
         component.setMaximumSize(new Dimension(x, y));
+    }
+
+    private Date getMinDate() {
+        return new Date(dateLowerLimit + minDateSlider.getValue() * (dateUpperLimit - dateLowerLimit + dateSliderWidth - 1) / dateSliderWidth);
+    }
+
+    private Date getMaxDate() {
+        return new Date(dateLowerLimit + maxDateSlider.getValue() * (dateUpperLimit - dateLowerLimit + dateSliderWidth - 1) / dateSliderWidth);
     }
 
 }
