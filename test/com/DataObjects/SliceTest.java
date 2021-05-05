@@ -49,7 +49,7 @@ class SliceTest {
     void getAccumulation() {
         Slice upwardSliceAccumulatedTest = upwardSlice.getAccumulation();
         assertEquals(upwardSliceAccumulated.points.length, upwardSliceAccumulatedTest.points.length);
-        for(int i = 0; i < upwardSliceAccumulatedTest.points.length; i++) {
+        for (int i = 0; i < upwardSliceAccumulatedTest.points.length; i++) {
             assertEquals(upwardSliceAccumulated.points[i].value, upwardSliceAccumulatedTest.points[i].value);
             assertEquals(upwardSliceAccumulated.points[i].amount, upwardSliceAccumulatedTest.points[i].amount);
             assertEquals(upwardSliceAccumulated.points[i].date, upwardSliceAccumulatedTest.points[i].date);

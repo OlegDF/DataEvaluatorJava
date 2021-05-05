@@ -7,7 +7,8 @@ import com.DataObjects.Slice;
  */
 public class EmptyApproximation implements Approximation {
 
-    public EmptyApproximation() {}
+    public EmptyApproximation() {
+    }
 
     @Override
     public long getApproximate(Slice slice, int pos) {
@@ -26,7 +27,7 @@ public class EmptyApproximation implements Approximation {
 
     @Override
     public double getAngleMultiplier(Slice slice) {
-        return (double)(slice.points[slice.points.length - 1].value - slice.points[0].value) / slice.dateRange;
+        return (double) (slice.points[slice.points.length - 1].value - slice.points[0].value) / slice.dateRange;
     }
 
 

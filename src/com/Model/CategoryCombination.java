@@ -22,7 +22,7 @@ public class CategoryCombination {
      */
     private List<String[]> getInitialCategories(List<String> categoryNames) {
         List<String[]> newCombos = new ArrayList<>();
-        for(String categoryName: categoryNames) {
+        for (String categoryName : categoryNames) {
             String[] newCombo = {categoryName};
             newCombos.add(newCombo);
         }
@@ -38,9 +38,9 @@ public class CategoryCombination {
      */
     public void addCategory(List<String> categoryNames) {
         List<String[]> newCombos = new ArrayList<>();
-        for(String[] combo: combos) {
-            for(String categoryName: categoryNames) {
-                if(categoryName.compareTo(combo[combo.length - 1]) <= 0) {
+        for (String[] combo : combos) {
+            for (String categoryName : categoryNames) {
+                if (categoryName.compareTo(combo[combo.length - 1]) <= 0) {
                     continue;
                 }
                 String[] newCombo = new String[combo.length + 1];

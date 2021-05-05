@@ -45,12 +45,12 @@ public class DataRetriever {
 
             int rowsExported = 0;
             List<String[]> rows = new ArrayList<>();
-            while(rowLine != null) {
+            while (rowLine != null) {
                 row = rowLine.split(";", -1);
                 rows.add(row);
                 rowLine = lineReader.readLine();
                 rowsExported++;
-                if(rowsExported % 1000 == 0) {
+                if (rowsExported % 1000 == 0) {
                     dbService.insertData(tableName, colNames, colTypes, rows);
                     rows = new ArrayList<>();
                     logger.logMessage("Экспортировано " + rowsExported + " строк");
@@ -84,17 +84,17 @@ public class DataRetriever {
         final Pattern floatPattern = Pattern.compile("-?\\d+(\\.\\d+)?");
         final Pattern timestampPattern = Pattern.compile("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.*");
 
-        for(int i = 0; i < firstRow.length; i++) {
-            if(intPattern.matcher(firstRow[i]).matches()) {
+        for (int i = 0; i < firstRow.length; i++) {
+            if (intPattern.matcher(firstRow[i]).matches()) {
                 colTypes[i] = "int8";
-            } else if(floatPattern.matcher(firstRow[i]).matches()) {
+            } else if (floatPattern.matcher(firstRow[i]).matches()) {
                 colTypes[i] = "float";
-            } else if(timestampPattern.matcher(firstRow[i]).matches()) {
+            } else if (timestampPattern.matcher(firstRow[i]).matches()) {
                 colTypes[i] = "timestamptz";
             } else {
                 colTypes[i] = "varchar(255)";
             }
-            if(colNames[i].startsWith("category") || colNames[i].startsWith("version")) {
+            if (colNames[i].startsWith("category") || colNames[i].startsWith("version")) {
                 colTypes[i] = "varchar(255)";
             }
         }

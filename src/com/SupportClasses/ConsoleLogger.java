@@ -2,7 +2,8 @@ package com.SupportClasses;
 
 public class ConsoleLogger implements Logger {
 
-    public ConsoleLogger() {}
+    public ConsoleLogger() {
+    }
 
     @Override
     public void logMessage(String message) {

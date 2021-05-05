@@ -98,21 +98,21 @@ public class IntervalFindingView {
         csvFilePanel.add(csvFileBox, constraints);
 
         List<String> tableNames = dbService.getTableNames();
-        for(String table : tableNames) {
+        for (String table : tableNames) {
             tableBox.addItem(table);
-            if(table.equals(tableName)) {
+            if (table.equals(tableName)) {
                 tableBox.setSelectedItem(table);
             }
         }
         setSize(tableBox, 150, 20);
         tableBox.setAlignmentX(Component.CENTER_ALIGNMENT);
         tableBox.addItemListener(e -> {
-            tableName = (String)tableBox.getSelectedItem();
+            tableName = (String) tableBox.getSelectedItem();
             getFirstLastDate();
-            minDateSlider.setMaximum((int)(dateUpperLimit - dateLowerLimit));
+            minDateSlider.setMaximum((int) (dateUpperLimit - dateLowerLimit));
             minDateSlider.setValue(0);
-            maxDateSlider.setMaximum((int)(dateUpperLimit - dateLowerLimit));
-            maxDateSlider.setValue((int)(dateUpperLimit - dateLowerLimit));
+            maxDateSlider.setMaximum((int) (dateUpperLimit - dateLowerLimit));
+            maxDateSlider.setValue((int) (dateUpperLimit - dateLowerLimit));
         });
         JLabel tableLabel = new JLabel();
         tableLabel.setText("Название таблицы: ");
@@ -135,7 +135,7 @@ public class IntervalFindingView {
     private void initializeSliders(GridBagConstraints constraints) {
         initializeSlider(minDateSlider, 0, dateUpperLimit - dateLowerLimit, 0, minDateNumber,
                 e -> {
-                    if(minDateSlider.getValue() > maxDateSlider.getValue()) {
+                    if (minDateSlider.getValue() > maxDateSlider.getValue()) {
                         minDateSlider.setValue(maxDateSlider.getValue());
                     }
                     minDateNumber.setText(new Date(dateLowerLimit + minDateSlider.getValue()).toString());
@@ -143,7 +143,7 @@ public class IntervalFindingView {
                 "Первая дата интервала: ", constraints);
         initializeSlider(maxDateSlider, 0, dateUpperLimit - dateLowerLimit, dateUpperLimit - dateLowerLimit, maxDateNumber,
                 e -> {
-                    if(maxDateSlider.getValue() < minDateSlider.getValue()) {
+                    if (maxDateSlider.getValue() < minDateSlider.getValue()) {
                         maxDateSlider.setValue(minDateSlider.getValue());
                     }
                     maxDateNumber.setText(new Date(dateLowerLimit + maxDateSlider.getValue()).toString());
@@ -152,14 +152,14 @@ public class IntervalFindingView {
     }
 
     private void initializeSlider(JSlider slider, long sliderMin, long sliderMax, long initialValue, JLabel sliderNumber,
-                                    ChangeListener listener, String labelText, GridBagConstraints constraints) {
-        slider.setMinimum((int)sliderMin);
-        slider.setMaximum((int)sliderMax);
+                                  ChangeListener listener, String labelText, GridBagConstraints constraints) {
+        slider.setMinimum((int) sliderMin);
+        slider.setMaximum((int) sliderMax);
         setSize(slider, 150, 20);
         slider.addChangeListener(listener);
-        slider.setValue((int)sliderMin);
-        slider.setValue((int)sliderMax);
-        slider.setValue((int)initialValue);
+        slider.setValue((int) sliderMin);
+        slider.setValue((int) sliderMax);
+        slider.setValue((int) initialValue);
 
         JLabel sliderLabel = new JLabel();
         sliderLabel.setText(labelText);
@@ -191,14 +191,15 @@ public class IntervalFindingView {
                 protected Void doInBackground() {
                     dataController.setTableName(csvFileBox.getText());
                     File csvFile = new File(csvFileBox.getText() + ".csv");
-                    if(csvFile.exists() && csvFile.isFile()) {
+                    if (csvFile.exists() && csvFile.isFile()) {
                         dataController.parseCsv();
                     }
-                    if(csvFileBox.getText().equals(tableName)) {
+                    if (csvFileBox.getText().equals(tableName)) {
                         getFirstLastDate();
                     }
                     return null;
                 }
+
                 @Override
                 public void done() {
                     unlockInterface();
@@ -225,6 +226,7 @@ public class IntervalFindingView {
                             new Date(dateLowerLimit + minDateSlider.getValue()), new Date(dateLowerLimit + maxDateSlider.getValue()));
                     return null;
                 }
+
                 @Override
                 public void done() {
                     unlockInterface();

@@ -62,14 +62,14 @@ public class DataController {
         List<Slice> slices;
         List<String> valueNames = dbService.getValueNames(tableName);
         List<Date> borderDates = dbService.getBorderDates(tableName);
-        for(String valueName: valueNames) {
+        for (String valueName : valueNames) {
             slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo, borderDates.get(0), borderDates.get(1));
             int graphsExported = 0;
-            for(Slice slice: slices) {
-                if(graphExporter.exportGraphToPng(slice)) {
+            for (Slice slice : slices) {
+                if (graphExporter.exportGraphToPng(slice)) {
                     graphsExported++;
                 }
-                if(graphsExported % (slices.size() / 10) == 0) {
+                if (graphsExported % (slices.size() / 10) == 0) {
                     logger.logMessage("Экспортировано " + graphsExported + " графиков");
                 }
             }
@@ -85,27 +85,27 @@ public class DataController {
      *
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
-     * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
+     * @param thresholdMult   - минимальная разность между первой и последней величиной для интервалов, которые будут
      *                        рассматриваться (измеряется как доля среднеквадратического отклонения)
-     * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
+     * @param maxIntervals    - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
     public void exportDecreaseGraphs(double minIntervalMult, double thresholdMult, int maxIntervals) {
         logger.logMessage("Начинается экспорт графиков уменьшения...");
         List<Slice> slices;
         List<String> valueNames = dbService.getValueNames(tableName);
         List<Date> borderDates = dbService.getBorderDates(tableName);
-        for(String valueName: valueNames) {
+        for (String valueName : valueNames) {
             slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo, borderDates.get(0), borderDates.get(1));
             int intervalsExported = 0;
             List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slices, minIntervalMult, thresholdMult,
                     maxIntervals, true);
             int intervalId = 0;
-            for(SuspiciousInterval interval: intervals) {
-                if(graphExporter.exportDecreaseGraphToPng(interval, "decreases", intervalId)) {
+            for (SuspiciousInterval interval : intervals) {
+                if (graphExporter.exportDecreaseGraphToPng(interval, "decreases", intervalId)) {
                     intervalsExported++;
                 }
                 intervalId++;
-                if(intervalsExported % (intervals.size() / 10) == 0) {
+                if (intervalsExported % (intervals.size() / 10) == 0) {
                     logger.logMessage("Экспортировано " + intervalsExported + " графиков");
                 }
             }
@@ -121,27 +121,27 @@ public class DataController {
      *
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
-     * @param thresholdMult - максимальная разность между максимальной и минимальной величиной для интервалов, которые будут
+     * @param thresholdMult   - максимальная разность между максимальной и минимальной величиной для интервалов, которые будут
      *                        рассматриваться (измеряется как доля среднеквадратического отклонения)
-     * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
+     * @param maxIntervals    - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
     public void exportConstantGraphs(double minIntervalMult, double thresholdMult, int maxIntervals) {
         logger.logMessage("Начинается экспорт графиков отсутствия роста...");
         List<Slice> slices;
         List<String> valueNames = dbService.getValueNames(tableName);
         List<Date> borderDates = dbService.getBorderDates(tableName);
-        for(String valueName: valueNames) {
+        for (String valueName : valueNames) {
             slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo, borderDates.get(0), borderDates.get(1));
             int intervalsExported = 0;
             List<SuspiciousInterval> intervals = intervalFinder.getConstantIntervals(slices, minIntervalMult, thresholdMult,
                     maxIntervals, true);
             int intervalId = 0;
-            for(SuspiciousInterval interval: intervals) {
-                if(graphExporter.exportDecreaseGraphToPng(interval, "constants", intervalId)) {
+            for (SuspiciousInterval interval : intervals) {
+                if (graphExporter.exportDecreaseGraphToPng(interval, "constants", intervalId)) {
                     intervalsExported++;
                 }
                 intervalId++;
-                if(intervalsExported % (intervals.size() / 10) == 0) {
+                if (intervalsExported % (intervals.size() / 10) == 0) {
                     logger.logMessage("Экспортировано " + intervalsExported + " графиков");
                 }
             }
@@ -157,7 +157,7 @@ public class DataController {
         List<String> categoryNames = dbService.getCategoryNames(tableName);
         final String[] colNames = new String[categoryNames.size() + 8];
         final String[] colTypes = new String[categoryNames.size() + 8];
-        for(int i = 0; i < categoryNames.size(); i++) {
+        for (int i = 0; i < categoryNames.size(); i++) {
             colNames[i] = categoryNames.get(i);
             colTypes[i] = "varchar(255)";
         }
@@ -187,9 +187,9 @@ public class DataController {
      *
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
-     * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
+     * @param thresholdMult   - минимальная разность между первой и последней величиной для интервалов, которые будут
      *                        рассматриваться (измеряется как доля среднеквадратического отклонения)
-     * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
+     * @param maxIntervals    - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
     public void exportDecreasesToDB(double minIntervalMult, double thresholdMult, int maxIntervals) {
         logger.logMessage("Начинается экспорт интервалов уменьшения...");
@@ -197,7 +197,7 @@ public class DataController {
         List<Slice> slices;
         List<String> valueNames = dbService.getValueNames(tableName);
         List<Date> borderDates = dbService.getBorderDates(tableName);
-        for(String valueName: valueNames) {
+        for (String valueName : valueNames) {
             slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo, borderDates.get(0), borderDates.get(1));
             List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slices, minIntervalMult, thresholdMult,
                     maxIntervals, false);
@@ -214,18 +214,18 @@ public class DataController {
      *
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
-     * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
+     * @param thresholdMult   - минимальная разность между первой и последней величиной для интервалов, которые будут
      *                        рассматриваться (измеряется как доля среднеквадратического отклонения)
-     * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
-     * @param minDate - дата начала интервалов
-     * @param maxDate - дата конца интервалов
+     * @param maxIntervals    - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
+     * @param minDate         - дата начала интервалов
+     * @param maxDate         - дата конца интервалов
      */
     public void exportDecreasesToDB(double minIntervalMult, double thresholdMult, int maxIntervals, Date minDate, Date maxDate) {
         logger.logMessage("Начинается экспорт интервалов уменьшения...");
         String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
         List<Slice> slices;
         List<String> valueNames = dbService.getValueNames(tableName);
-        for(String valueName: valueNames) {
+        for (String valueName : valueNames) {
             slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo, minDate, maxDate);
             List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slices, minIntervalMult, thresholdMult,
                     maxIntervals, false);
@@ -242,7 +242,7 @@ public class DataController {
         List<String> categoryNames = dbService.getCategoryNames(tableName);
         final String[] colNames = new String[categoryNames.size() + 8];
         final String[] colTypes = new String[categoryNames.size() + 8];
-        for(int i = 0; i < categoryNames.size(); i++) {
+        for (int i = 0; i < categoryNames.size(); i++) {
             colNames[i] = categoryNames.get(i);
             colTypes[i] = "varchar(255)";
         }
@@ -272,9 +272,9 @@ public class DataController {
      *
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
-     * @param thresholdMult - максимальная разность между максимальной и минимальной величиной для интервалов, которые будут
+     * @param thresholdMult   - максимальная разность между максимальной и минимальной величиной для интервалов, которые будут
      *                        рассматриваться (измеряется как доля среднеквадратического отклонения)
-     * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
+     * @param maxIntervals    - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
      */
     public void exportConstantsToDB(double minIntervalMult, double thresholdMult, int maxIntervals) {
         logger.logMessage("Начинается экспорт интервалов отсутствия роста...");
@@ -282,7 +282,7 @@ public class DataController {
         List<Slice> slices;
         List<String> valueNames = dbService.getValueNames(tableName);
         List<Date> borderDates = dbService.getBorderDates(tableName);
-        for(String valueName: valueNames) {
+        for (String valueName : valueNames) {
             slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo, borderDates.get(0), borderDates.get(1));
             List<SuspiciousInterval> intervals = intervalFinder.getConstantIntervals(slices, minIntervalMult, thresholdMult,
                     maxIntervals, false);
@@ -299,18 +299,18 @@ public class DataController {
      *
      * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
      *                        временного промежутка всего разреза, от 0 до 1)
-     * @param thresholdMult - максимальная разность между максимальной и минимальной величиной для интервалов, которые будут
+     * @param thresholdMult   - максимальная разность между максимальной и минимальной величиной для интервалов, которые будут
      *                        рассматриваться (измеряется как доля среднеквадратического отклонения)
-     * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
-     * @param minDate - дата начала интервалов
-     * @param maxDate - дата конца интервалов
+     * @param maxIntervals    - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
+     * @param minDate         - дата начала интервалов
+     * @param maxDate         - дата конца интервалов
      */
     public void exportConstantsToDB(double minIntervalMult, double thresholdMult, int maxIntervals, Date minDate, Date maxDate) {
         logger.logMessage("Начинается экспорт интервалов отсутствия роста...");
         String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
         List<Slice> slices;
         List<String> valueNames = dbService.getValueNames(tableName);
-        for(String valueName: valueNames) {
+        for (String valueName : valueNames) {
             slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo, minDate, maxDate);
             List<SuspiciousInterval> intervals = intervalFinder.getConstantIntervals(slices, minIntervalMult, thresholdMult,
                     maxIntervals, false);
