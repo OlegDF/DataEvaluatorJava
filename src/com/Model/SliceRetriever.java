@@ -5,10 +5,7 @@ import com.DataObjects.Slice;
 import com.SupportClasses.ConsoleLogger;
 import com.SupportClasses.Logger;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 /**
  * Класс, который получает разрезы данных.
@@ -35,12 +32,12 @@ public class SliceRetriever {
      *
      * @return список разрезов
      */
-    public List<Slice> getCategorySlices(String tableName, String valueName, String[] categories, int maxSlices) {
+    public List<Slice> getCategorySlices(String tableName, String valueName, String[] categories, int maxSlices, Date minDate, Date maxDate) {
         logger.logMessage("Начинается получение разрезов по категориям " + Arrays.toString(categories) + "...");
         List<Slice> res = new ArrayList<>();
         List<String[]> labelCombinations = dbService.getLabelCombinations(tableName, categories, maxSlices);
         for(String[] combination: labelCombinations) {
-            res.add(dbService.getSlice(tableName, valueName, categories, combination, approximationType));
+            res.add(dbService.getSlice(tableName, valueName, categories, combination, approximationType, minDate, maxDate));
         }
         res.sort(Comparator.comparingLong(o -> -o.totalAmount));
         logger.logMessage("Закончилось получение разрезов по категории " + Arrays.toString(categories) + ", получено " + res.size() + " разрезов.");
@@ -57,9 +54,9 @@ public class SliceRetriever {
      *
      * @return список разрезов с накоплением
      */
-    public List<Slice> getCategorySlicesAccumulated(String tableName, String valueName, String[] categories, int maxSlices) {
+    public List<Slice> getCategorySlicesAccumulated(String tableName, String valueName, String[] categories, int maxSlices, Date minDate, Date maxDate) {
         List<Slice> res = new ArrayList<>();
-        List<Slice> slices = getCategorySlices(tableName, valueName, categories, maxSlices);
+        List<Slice> slices = getCategorySlices(tableName, valueName, categories, maxSlices, minDate, maxDate);
         for(Slice slice: slices) {
             res.add(slice.getAccumulation());
         }
@@ -76,13 +73,13 @@ public class SliceRetriever {
      * @param maxCategories - максимальное количество категорий, по которым группируется каждый разрез.
      * @return список разрезов с накоплением
      */
-    public List<Slice> getSlicesAccumulated(String tableName, String valueName, int maxCategories, int maxSlices) {
+    public List<Slice> getSlicesAccumulated(String tableName, String valueName, int maxCategories, int maxSlices, Date minDate, Date maxDate) {
         List<String> categoryNames = dbService.getCategoryNames(tableName);
         List<Slice> res = new ArrayList<>();
         CategoryCombination categoryCombos = new CategoryCombination(categoryNames);
         for(int i = 0; i < maxCategories; i++) {
             for(String[] categories: categoryCombos.combos) {
-                res.addAll(getCategorySlicesAccumulated(tableName, valueName, categories, maxSlices));
+                res.addAll(getCategorySlicesAccumulated(tableName, valueName, categories, maxSlices, minDate, maxDate));
             }
             categoryCombos.addCategory(categoryNames);
         }

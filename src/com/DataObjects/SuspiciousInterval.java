@@ -38,15 +38,15 @@ public class SuspiciousInterval {
         if(pos1 < 0 || pos1 >= slice.points.length || pos2 < 0 || pos2 >= slice.points.length) {
             return -1;
         }
-        double res = Math.sqrt(slice.dateRange) * getRelativeDiff() * getRelativeDiff();
+        double res = Math.sqrt(slice.dateRange) * Math.pow(getRelativeDiff(), 2) * pos1;
         if(getRelativeWidth() != 0) {
-            //res /= getRelativeWidth();
+            res /= Math.pow(getRelativeWidth(), 2);
         }
         double relativeSigma = slice.getSigma() / slice.valueRange;
         if(relativeSigma != 0) {
             res /= relativeSigma;
         }
-        //res = getComparisonToApproximation(res);
+        res = getComparisonToApproximation(res);
         res = compareApproximations(res);
         return res;
     }
@@ -182,6 +182,14 @@ public class SuspiciousInterval {
 
     public boolean hasPartialApproximation() {
         return partialApproximation != null;
+    }
+
+    public SlicePoint getFirstPoint() {
+        return slice.points[pos1];
+    }
+
+    public SlicePoint getLastPoint() {
+        return slice.points[pos2];
     }
 
     /**

@@ -11,6 +11,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -128,7 +129,8 @@ public class DatabaseService {
      * @param approximationType - тип функции приближения
      * @return объект-разрез
      */
-    public Slice getSlice(String tableName, String valueName, String[] colNames, String[] labels, ApproximationType approximationType) {
+    public Slice getSlice(String tableName, String valueName, String[] colNames, String[] labels, ApproximationType approximationType,
+                          Date minDate, Date maxDate) {
         StringBuilder query = new StringBuilder();
         try {
             query.append("SELECT * FROM ").append(tableName).append(" WHERE ");
@@ -139,6 +141,7 @@ public class DatabaseService {
                     query.append(" AND ");
                 }
             }
+            query.append(" AND first_date >= '").append(minDate).append("' AND first_date <= '").append(maxDate).append("'");
             query.append(" ORDER BY first_date;");
             ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query.toString());
             res.last();
@@ -156,6 +159,28 @@ public class DatabaseService {
             handleSQLException(ex);
         }
         return new Slice(tableName, valueName, colNames, labels);
+    }
+
+    /**
+     * Возвращает наименьшую и наибольшую даты исходных данных из определенной таблицы.
+     * @param tableName - название таблицы
+     * @return список с 2 датами - наименьшей и наибольшей
+     */
+    public List<Date> getBorderDates(String tableName) {
+        String query = "";
+        try {
+            query = "SELECT MIN(first_date) AS min_date, MAX(first_date) AS max_date FROM " + tableName + ";";
+            ResultSet res = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query);
+            List<Date> dates = new ArrayList<>();
+            res.next();
+            dates.add(res.getTimestamp("min_date"));
+            dates.add(res.getTimestamp("max_date"));
+            return dates;
+        } catch (SQLException ex) {
+            logger.logError("Не удалось получить список столбцов по запросу: " + query);
+            handleSQLException(ex);
+        }
+        return new ArrayList<>();
     }
 
     /**
@@ -348,7 +373,7 @@ public class DatabaseService {
      * @param colNames - названия столбцов таблицы
      * @param intervals - вставляемые интервалы
      */
-    public void insertDecrease(String tableName, String[] colNames, List<SuspiciousInterval> intervals) {
+    public void insertDecrease(String tableName, String[] colNames, List<SuspiciousInterval> intervals, Date minDate, Date maxDate) {
         StringBuilder query = new StringBuilder();
         try {
             query.append("INSERT INTO ").append(tableName).append("(");
@@ -358,7 +383,7 @@ public class DatabaseService {
                     query.append(", ");
                 }
             }
-            query.append(", pos1, pos2, decrease_score, relative_width, relative_diff, value_name");
+            query.append(", pos1, pos2, min_date, max_date, decrease_score, relative_width, relative_diff, value_name");
             query.append(") VALUES (");
             for(int k = 0; k < intervals.size(); k++) {
                 SuspiciousInterval interval = intervals.get(k);
@@ -388,6 +413,8 @@ public class DatabaseService {
                 }
                 query.append(", ").append(interval.pos1);
                 query.append(", ").append(interval.pos2);
+                query.append(", '").append(minDate).append("'");
+                query.append(", '").append(maxDate).append("'");
                 query.append(", ").append(interval.getDecreaseScore());
                 query.append(", ").append(interval.getRelativeWidth());
                 query.append(", ").append(interval.getRelativeDiff() / interval.slice.getRelativeSigma());
@@ -440,8 +467,10 @@ public class DatabaseService {
             while(res.next() && intervals.size() <= maxIntervals * categoryNames.size()) {
                 int pos1 = res.getInt("pos1");
                 int pos2 = res.getInt("pos2");
+                Date minDate = res.getTimestamp("min_date");
+                Date maxDate = res.getTimestamp("max_date");
                 if(!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
-                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices);
+                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices, minDate, maxDate);
                     intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
                 }
             }
@@ -490,8 +519,10 @@ public class DatabaseService {
             while(res.next() && intervals.size() <= maxIntervals * categoryNames.size()) {
                 int pos1 = res.getInt("pos1");
                 int pos2 = res.getInt("pos2");
+                Date minDate = res.getTimestamp("min_date");
+                Date maxDate = res.getTimestamp("max_date");
                 if(!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
-                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices);
+                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices, minDate, maxDate);
                     intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
                 }
             }
@@ -511,7 +542,7 @@ public class DatabaseService {
      * @param colNames - названия столбцов таблицы
      * @param intervals - вставляемые интервалы
      */
-    public void insertConstant(String tableName, String[] colNames, List<SuspiciousInterval> intervals) {
+    public void insertConstant(String tableName, String[] colNames, List<SuspiciousInterval> intervals, Date minDate, Date maxDate) {
         StringBuilder query = new StringBuilder();
         try {
             query.append("INSERT INTO ").append(tableName).append("(");
@@ -521,7 +552,7 @@ public class DatabaseService {
                     query.append(", ");
                 }
             }
-            query.append(", pos1, pos2, flatness_score, relative_width, relative_value_range, value_name");
+            query.append(", pos1, pos2, min_date, max_date, flatness_score, relative_width, relative_value_range, value_name");
             query.append(") VALUES (");
             for(int k = 0; k < intervals.size(); k++) {
                 SuspiciousInterval interval = intervals.get(k);
@@ -551,6 +582,8 @@ public class DatabaseService {
                 }
                 query.append(", ").append(interval.pos1);
                 query.append(", ").append(interval.pos2);
+                query.append(", '").append(minDate).append("'");
+                query.append(", '").append(maxDate).append("'");
                 query.append(", ").append(interval.getFlatnessScore());
                 query.append(", ").append(interval.getRelativeWidth());
                 query.append(", ").append(interval.getRelativeValueRange() / interval.slice.getRelativeSigma());
@@ -603,8 +636,10 @@ public class DatabaseService {
             while(res.next() && intervals.size() <= maxIntervals * categoryNames.size()) {
                 int pos1 = res.getInt("pos1");
                 int pos2 = res.getInt("pos2");
+                Date minDate = res.getTimestamp("min_date");
+                Date maxDate = res.getTimestamp("max_date");
                 if(!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
-                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices);
+                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices, minDate, maxDate);
                     intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
                 }
             }
@@ -653,8 +688,10 @@ public class DatabaseService {
             while(res.next() && intervals.size() <= maxIntervals * categoryNames.size()) {
                 int pos1 = res.getInt("pos1");
                 int pos2 = res.getInt("pos2");
+                Date minDate = res.getTimestamp("min_date");
+                Date maxDate = res.getTimestamp("max_date");
                 if(!intervalIntersects(intervals, categoryNames, res, pos1, pos2)) {
-                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices);
+                    Slice slice = matchSlice(tableName, valueName, approximationType, categoryNames, res, slices, minDate, maxDate);
                     intervals.add(new SuspiciousInterval(slice, pos1, pos2, 0.05));
                 }
             }
@@ -752,7 +789,7 @@ public class DatabaseService {
      * @return новый или найденный срез
      */
     private Slice matchSlice(String tableName, String valueName, ApproximationType approximationType,
-                             List<String> categoryNames, ResultSet res, List<Slice> slices) throws SQLException {
+                             List<String> categoryNames, ResultSet res, List<Slice> slices, Date minDate, Date maxDate) throws SQLException {
         List<String> labelsList = new ArrayList<>();
         List<String> colNamesList = new ArrayList<>();
         for (String categoryName : categoryNames) {
@@ -780,7 +817,7 @@ public class DatabaseService {
             }
         }
         if (slice == null) {
-            slice = getSlice(tableName, valueName, colNames, labels, approximationType).getAccumulation();
+            slice = getSlice(tableName, valueName, colNames, labels, approximationType, minDate, maxDate).getAccumulation();
             slices.add(slice);
         }
         return slice;
