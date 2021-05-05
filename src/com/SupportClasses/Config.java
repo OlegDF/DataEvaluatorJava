@@ -31,10 +31,10 @@ public class Config {
             BufferedReader lineReader = new BufferedReader(new FileReader("db_config.txt"));
 
             String line = lineReader.readLine();
-            while(line != null) {
-                if(!line.startsWith("//")) {
+            while (line != null) {
+                if (!line.startsWith("//")) {
                     String[] lineSplit = line.split("=");
-                    if(lineSplit.length == 2) {
+                    if (lineSplit.length == 2) {
                         res.putIfAbsent(lineSplit[0], lineSplit[1]);
                     }
                 }
@@ -88,7 +88,7 @@ public class Config {
 
     public ApproximationType getApproximationType() {
         String approximationTypeStr = config.get("approximation_type");
-        switch(approximationTypeStr) {
+        switch (approximationTypeStr) {
             case "empty":
                 return ApproximationType.EMPTY;
             case "linear":

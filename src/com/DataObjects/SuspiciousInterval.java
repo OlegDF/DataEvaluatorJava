@@ -35,15 +35,15 @@ public class SuspiciousInterval {
      * @return меру уменьшения значения
      */
     public double getDecreaseScore() {
-        if(pos1 < 0 || pos1 >= slice.points.length || pos2 < 0 || pos2 >= slice.points.length) {
+        if (pos1 < 0 || pos1 >= slice.points.length || pos2 < 0 || pos2 >= slice.points.length) {
             return -1;
         }
         double res = Math.sqrt(slice.dateRange) * Math.pow(getRelativeDiff(), 2) * pos1;
-        if(getRelativeWidth() != 0) {
+        if (getRelativeWidth() != 0) {
             res /= Math.pow(getRelativeWidth(), 2);
         }
         double relativeSigma = slice.getSigma() / slice.valueRange;
-        if(relativeSigma != 0) {
+        if (relativeSigma != 0) {
             res /= relativeSigma;
         }
         res = getComparisonToApproximation(res);
@@ -74,10 +74,10 @@ public class SuspiciousInterval {
      * @return новая мера значимости
      */
     private double getComparisonToApproximation(double res) {
-        if(partialApproximation != null) {
-            if(partialApproximation.getSigma() != 0) {
+        if (partialApproximation != null) {
+            if (partialApproximation.getSigma() != 0) {
                 double diffWithExpectation = (slice.points[pos2].value - partialApproximation.getApproximate(slice, pos2));
-                if(-diffWithExpectation >= partialApproximation.getSigma()) {
+                if (-diffWithExpectation >= partialApproximation.getSigma()) {
                     res *= (Math.abs(diffWithExpectation) / partialApproximation.getSigma());
                 } else {
                     res /= ((diffWithExpectation / partialApproximation.getSigma()) + 1);
@@ -85,7 +85,7 @@ public class SuspiciousInterval {
                 }
                 double diffAtTheEnd = (slice.getApproximate(slice.points.length - 1) -
                         partialApproximation.getApproximate(slice, slice.points.length - 1));
-                if(-diffAtTheEnd >= partialApproximation.getSigma()) {
+                if (-diffAtTheEnd >= partialApproximation.getSigma()) {
                     res *= (Math.abs(diffAtTheEnd) / partialApproximation.getSigma());
                 } else {
                     res /= ((diffAtTheEnd / partialApproximation.getSigma()) + 1);
@@ -95,6 +95,7 @@ public class SuspiciousInterval {
         }
         return res;
     }
+
     /**
      * Вычисляет коэффициент и умножает на него меру значимости. Коэффициент увеличивается, если частичное приближение
      * имеет значительный наклон вверх или полное приближение имеет значительный наклон вниз, в противном случае он уменьшается.
@@ -103,17 +104,17 @@ public class SuspiciousInterval {
      * @return новая мера значимости
      */
     private double compareApproximations(double res) {
-        if(partialApproximation != null) {
+        if (partialApproximation != null) {
             double approximationAngle = slice.getApproximationAngle();
             double partialApproximationAngle = partialApproximation.getAngleMultiplier(slice);
-            if(approximationAngle > 0) {
+            if (approximationAngle > 0) {
                 res /= (approximationAngle * 100 + 1);
-            } else if(approximationAngle < 0) {
+            } else if (approximationAngle < 0) {
                 res *= (-approximationAngle * 100 + 1) * (-approximationAngle * 100 + 1);
             }
-            if(partialApproximationAngle > 0) {
+            if (partialApproximationAngle > 0) {
                 res *= (partialApproximationAngle * 100 + 1) * (partialApproximationAngle * 100 + 1);
-            } else if(partialApproximationAngle < 0) {
+            } else if (partialApproximationAngle < 0) {
                 res /= (-partialApproximationAngle * 100 + 1);
             }
         }
@@ -149,7 +150,7 @@ public class SuspiciousInterval {
      * @return отношение разностей значений (ожидаемые значения - между -1 и 1)
      */
     public double getRelativeDiff() {
-        return (double)(slice.points[pos2].value - slice.points[pos1].value - slice.getApproximate(pos2) + slice.getApproximate(pos1)) / (slice.valueRange);
+        return (double) (slice.points[pos2].value - slice.points[pos1].value - slice.getApproximate(pos2) + slice.getApproximate(pos1)) / (slice.valueRange);
     }
 
     /**
@@ -159,8 +160,9 @@ public class SuspiciousInterval {
      * @return отношение разностей значений (ожидаемые значения - между -1 и 1)
      */
     public double getRelativeValueRange() {
-        return (double)(slice.getLocalValueRange(pos1, pos2)) / (slice.valueRange);
+        return (double) (slice.getLocalValueRange(pos1, pos2)) / (slice.valueRange);
     }
+
     /**
      * Получает значение частичной функции приближения в определенной точке во времени.
      *
@@ -200,7 +202,7 @@ public class SuspiciousInterval {
      * @return частичная функция приближения
      */
     private Approximation getPartialApproximation(double minStartDate) {
-        if(slice.getDateDistance(0, pos1) >= slice.dateRange * minStartDate) {
+        if (slice.getDateDistance(0, pos1) >= slice.dateRange * minStartDate) {
             return new LinearRegression(slice, 0, pos1);
         } else {
             return null;

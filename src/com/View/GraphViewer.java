@@ -104,7 +104,7 @@ public class GraphViewer {
 
         colNameBoxes = new JComboBox[config.getMaxCategoriesPerCombo()];
         labelBoxes = new JComboBox[config.getMaxCategoriesPerCombo()];
-        for(int i = 0; i < colNameBoxes.length; i++) {
+        for (int i = 0; i < colNameBoxes.length; i++) {
             colNameBoxes[i] = new JComboBox<>();
             labelBoxes[i] = new JComboBox<>();
         }
@@ -154,17 +154,17 @@ public class GraphViewer {
      */
     private void initializeGraphTypesBox(GridBagConstraints constraints) {
         List<String> tableNames = dbService.getTableNames();
-        for(String table : tableNames) {
+        for (String table : tableNames) {
             tableBox.addItem(table);
-            if(table.equals(tableName)) {
+            if (table.equals(tableName)) {
                 tableBox.setSelectedItem(table);
             }
         }
         setSize(tableBox, 120, 20);
         tableBox.setAlignmentX(Component.CENTER_ALIGNMENT);
         tableBox.addItemListener(e -> {
-            tableName = (String)tableBox.getSelectedItem();
-            if(simpleMode) {
+            tableName = (String) tableBox.getSelectedItem();
+            if (simpleMode) {
                 fillCategoryBoxes();
             }
             fillValueBoxes();
@@ -180,10 +180,10 @@ public class GraphViewer {
         interfaceTypeBox.setAlignmentX(Component.CENTER_ALIGNMENT);
         interfaceTypeBox.addItemListener(e -> {
             simpleMode = interfaceTypeBox.getSelectedIndex() != 0;
-            for(JPanel panel: simpleModePanels) {
+            for (JPanel panel : simpleModePanels) {
                 panel.setVisible(simpleMode);
             }
-            for(JPanel panel: regularModePanels) {
+            for (JPanel panel : regularModePanels) {
                 panel.setVisible(!simpleMode);
             }
         });
@@ -231,7 +231,7 @@ public class GraphViewer {
      * @param constraints - параметры расположения элементов в окне
      */
     private void initializeCategoryBoxes(GridBagConstraints constraints) {
-        for(int i = 0; i < colNameBoxes.length; i++) {
+        for (int i = 0; i < colNameBoxes.length; i++) {
             setSize(colNameBoxes[i], 150, 20);
             colNameBoxes[i].setAlignmentX(Component.CENTER_ALIGNMENT);
             setSize(labelBoxes[i], 150, 20);
@@ -259,20 +259,20 @@ public class GraphViewer {
      */
     private void fillCategoryBoxes() {
         List<String> categoryNames = dbService.getCategoryNames(tableName);
-        for(int i = 0; i < colNameBoxes.length; i++) {
+        for (int i = 0; i < colNameBoxes.length; i++) {
             colNameBoxes[i].removeAllItems();
             labelBoxes[i].removeAllItems();
             colNameBoxes[i].addItem(labelAbsent);
             labelBoxes[i].addItem(labelAbsent);
-            for(String category: categoryNames) {
+            for (String category : categoryNames) {
                 colNameBoxes[i].addItem(category);
             }
             colNameBoxes[i].setSelectedIndex(0);
             final int iFixed = i;
             colNameBoxes[iFixed].addItemListener(e -> {
-                String colName = (String)colNameBoxes[iFixed].getSelectedItem();
-                if(colName != null) {
-                    if(!colName.equals(labelAbsent)) {
+                String colName = (String) colNameBoxes[iFixed].getSelectedItem();
+                if (colName != null) {
+                    if (!colName.equals(labelAbsent)) {
                         fillLabelBox(iFixed);
                     }
                 }
@@ -283,7 +283,7 @@ public class GraphViewer {
     private void fillValueBoxes() {
         List<String> valueNames = dbService.getValueNames(tableName);
         valueBox.removeAllItems();
-        for(String value: valueNames) {
+        for (String value : valueNames) {
             valueBox.addItem(value);
         }
         valueBox.setSelectedIndex(0);
@@ -298,8 +298,8 @@ public class GraphViewer {
         labelBoxes[i].removeAllItems();
         labelBoxes[i].addItem(labelAbsent);
         labelBoxes[i].addItem(labelAll);
-        List<String> labelsList = dbService.getLabelList(tableName, (String)colNameBoxes[i].getSelectedItem(), config.getMaxSlicesPerCombo());
-        for(String label: labelsList) {
+        List<String> labelsList = dbService.getLabelList(tableName, (String) colNameBoxes[i].getSelectedItem(), config.getMaxSlicesPerCombo());
+        for (String label : labelsList) {
             labelBoxes[i].addItem(label);
         }
     }
@@ -369,9 +369,10 @@ public class GraphViewer {
                     getIntervals();
                     return null;
                 }
+
                 @Override
                 public void done() {
-                    if(decreaseIntervals.size() > 0) {
+                    if (decreaseIntervals.size() > 0) {
                         currentGraphs.add(new ChartPanel(graphExporter.getDecreaseChart(decreaseIntervals.get(0))));
                         drawGraph();
                     } else {
@@ -448,15 +449,15 @@ public class GraphViewer {
      * отображает наиболее значимый из них на графике.
      */
     private void getIntervals() {
-        if(simpleMode) {
-            if(!getGraphsSimple()) {
+        if (simpleMode) {
+            if (!getGraphsSimple()) {
                 return;
             }
         } else {
             getGraphsRegular();
         }
         intervalFinder.removeIntersectingIntervals(decreaseIntervals);
-        if(decreaseIntervals.size() > maxGraphsSlider.getValue()) {
+        if (decreaseIntervals.size() > maxGraphsSlider.getValue()) {
             decreaseIntervals = decreaseIntervals.subList(0, maxGraphsSlider.getValue());
         }
         currentGraphs = new ArrayList<>();
@@ -467,37 +468,37 @@ public class GraphViewer {
     private boolean getGraphsSimple() {
         List<String> colNames = new ArrayList<>();
         List<String[]> labels = new ArrayList<>();
-        String colName = (String)colNameBoxes[0].getSelectedItem();
-        String label = (String)labelBoxes[0].getSelectedItem();
-        if(!colName.equals(labelAbsent) && !label.equals(labelAbsent)) {
+        String colName = (String) colNameBoxes[0].getSelectedItem();
+        String label = (String) labelBoxes[0].getSelectedItem();
+        if (!colName.equals(labelAbsent) && !label.equals(labelAbsent)) {
             colNames.add(colName);
-            if(!label.equals(labelAll)) {
+            if (!label.equals(labelAll)) {
                 String[] labelsComboNew = new String[1];
                 labelsComboNew[0] = "'" + label + "'";
                 labels.add(labelsComboNew);
             } else {
-                for(int j = 2; j < labelBoxes[0].getItemCount(); j++) {
+                for (int j = 2; j < labelBoxes[0].getItemCount(); j++) {
                     String[] labelsComboNew = new String[1];
                     labelsComboNew[0] = "'" + labelBoxes[0].getItemAt(j) + "'";
                     labels.add(labelsComboNew);
                 }
             }
         }
-        for(int i = 1; i < colNameBoxes.length; i++) {
-            colName = (String)colNameBoxes[i].getSelectedItem();
-            label = (String)labelBoxes[i].getSelectedItem();
+        for (int i = 1; i < colNameBoxes.length; i++) {
+            colName = (String) colNameBoxes[i].getSelectedItem();
+            label = (String) labelBoxes[i].getSelectedItem();
             List<String[]> labelsNew = new ArrayList<>();
-            if(!colName.equals(labelAbsent) && !label.equals(labelAbsent)) {
+            if (!colName.equals(labelAbsent) && !label.equals(labelAbsent)) {
                 colNames.add(colName);
-                if(!label.equals(labelAll)) {
-                    for(String[] labelsCombo: labels) {
+                if (!label.equals(labelAll)) {
+                    for (String[] labelsCombo : labels) {
                         String[] labelsComboNew = Arrays.copyOf(labelsCombo, labelsCombo.length + 1);
                         labelsComboNew[labelsComboNew.length - 1] = "'" + label + "'";
                         labelsNew.add(labelsComboNew);
                     }
                 } else {
-                    for(String[] labelsCombo: labels) {
-                        for(int j = 2; j < labelBoxes[i].getItemCount(); j++) {
+                    for (String[] labelsCombo : labels) {
+                        for (int j = 2; j < labelBoxes[i].getItemCount(); j++) {
                             String[] labelsComboNew = Arrays.copyOf(labelsCombo, labelsCombo.length + 1);
                             labelsComboNew[labelsComboNew.length - 1] = "'" + labelBoxes[i].getItemAt(j) + "'";
                             labelsNew.add(labelsComboNew);
@@ -507,13 +508,13 @@ public class GraphViewer {
                 labels = labelsNew;
             }
         }
-        if(colNames.size() <= 0) {
+        if (colNames.size() <= 0) {
             return false;
         }
         decreaseIntervals = new ArrayList<>();
-        String valueName = (String)valueBox.getSelectedItem();
-        for(String[] labelsCombo: labels) {
-            switch(graphTypeBox.getSelectedIndex()) {
+        String valueName = (String) valueBox.getSelectedItem();
+        for (String[] labelsCombo : labels) {
+            switch (graphTypeBox.getSelectedIndex()) {
                 case 0:
                     logger.logMessage("Начинается получение графиков уменьшения...");
                     decreaseIntervals.addAll(dbService.getDecreasesSimple(tableName, valueName, colNames.toArray(new String[0]),
@@ -535,14 +536,14 @@ public class GraphViewer {
         List<String> categoryNames = dbService.getCategoryNames(tableName);
         List<String[]> categoryCombosFinal = new ArrayList<>();
         CategoryCombination categoryCombos = new CategoryCombination(categoryNames);
-        for(int i = 1; i <= maxCategoriesSlider.getValue(); i++) {
+        for (int i = 1; i <= maxCategoriesSlider.getValue(); i++) {
             categoryCombosFinal.addAll(categoryCombos.combos);
-            if(i < maxCategoriesSlider.getValue()) {
+            if (i < maxCategoriesSlider.getValue()) {
                 categoryCombos.addCategory(categoryNames);
             }
         }
-        String valueName = (String)valueBox.getSelectedItem();
-        switch(graphTypeBox.getSelectedIndex()) {
+        String valueName = (String) valueBox.getSelectedItem();
+        switch (graphTypeBox.getSelectedIndex()) {
             case 0:
                 logger.logMessage("Начинается получение графиков уменьшения...");
                 decreaseIntervals = dbService.getDecreases(tableName, valueName, categoryCombosFinal, approximationType,
@@ -559,10 +560,10 @@ public class GraphViewer {
     }
 
     private void lockInterface() {
-        for(JComboBox box: colNameBoxes) {
+        for (JComboBox box : colNameBoxes) {
             box.setEnabled(false);
         }
-        for(JComboBox box: labelBoxes) {
+        for (JComboBox box : labelBoxes) {
             box.setEnabled(false);
         }
         tableBox.setEnabled(false);
@@ -577,10 +578,10 @@ public class GraphViewer {
     }
 
     private void unlockInterface() {
-        for(JComboBox box: colNameBoxes) {
+        for (JComboBox box : colNameBoxes) {
             box.setEnabled(true);
         }
-        for(JComboBox box: labelBoxes) {
+        for (JComboBox box : labelBoxes) {
             box.setEnabled(true);
         }
         tableBox.setEnabled(true);
@@ -599,7 +600,7 @@ public class GraphViewer {
      */
     private void drawGraph() {
         ChartPanel chartPanel;
-        if(currentInterval >= currentGraphs.size()) {
+        if (currentInterval >= currentGraphs.size()) {
             currentGraphs.add(new ChartPanel(graphExporter.getDecreaseChart(decreaseIntervals.get(currentInterval))));
         }
         chartPanel = currentGraphs.get(currentInterval);
@@ -647,7 +648,7 @@ public class GraphViewer {
      * Сдвигает номер выборанного графика на -1.
      */
     private void moveGraphLeft() {
-        if(currentInterval > 0) {
+        if (currentInterval > 0) {
             currentInterval--;
             drawGraph();
         }
@@ -657,7 +658,7 @@ public class GraphViewer {
      * Сдвигает номер выборанного графика на 1.
      */
     private void moveGraphRight() {
-        if(currentInterval < decreaseIntervals.size() - 1) {
+        if (currentInterval < decreaseIntervals.size() - 1) {
             currentInterval++;
             drawGraph();
         }
@@ -669,7 +670,7 @@ public class GraphViewer {
      * @return минимальная ширина интервалов
      */
     private double getMinInterval() {
-        return minIntervalLowerLimit + (double)minIntervalMultSlider.getValue() / minIntervalSliderWidth *
+        return minIntervalLowerLimit + (double) minIntervalMultSlider.getValue() / minIntervalSliderWidth *
                 (minIntervalUpperLimit - minIntervalLowerLimit);
     }
 
@@ -679,7 +680,7 @@ public class GraphViewer {
      * @return разность величин интервалов
      */
     private double getThreshold() {
-        return thresholdLowerLimit + (double)thresholdMultSlider.getValue() / thresholdSliderWidth * (
+        return thresholdLowerLimit + (double) thresholdMultSlider.getValue() / thresholdSliderWidth * (
                 thresholdUpperLimit - thresholdLowerLimit);
     }
 

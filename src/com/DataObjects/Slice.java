@@ -24,8 +24,8 @@ public class Slice {
      * Конструктор пустого разреза, для которого не найдено подходящих точек.
      *
      * @param tableName - таблица, из которой получен разрез
-     * @param colNames - названия столбцов, по которым создается разрез
-     * @param labels - значения соответствующих столбцов
+     * @param colNames  - названия столбцов, по которым создается разрез
+     * @param labels    - значения соответствующих столбцов
      */
     public Slice(String tableName, String valueName, String[] colNames, String[] labels) {
         this.tableName = tableName;
@@ -42,10 +42,10 @@ public class Slice {
     /**
      * Конструктор разреза, содержащего набор точек.
      *
-     * @param tableName - таблица, из которой получен разрез
-     * @param colNames - названия столбцов, по которым создается разрез
-     * @param labels - значения соответствующих столбцов
-     * @param points - список точек разреза
+     * @param tableName         - таблица, из которой получен разрез
+     * @param colNames          - названия столбцов, по которым создается разрез
+     * @param labels            - значения соответствующих столбцов
+     * @param points            - список точек разреза
      * @param approximationType - тип функции приближения
      */
     public Slice(String tableName, String valueName, String[] colNames, String[] labels, SlicePoint[] points, ApproximationType approximationType) {
@@ -54,11 +54,11 @@ public class Slice {
         this.colNames = colNames;
         this.labels = labels;
         this.points = points;
-        if(points.length > 0) {
+        if (points.length > 0) {
             this.valueRange = getValueRange();
             this.dateRange = getDateRange();
             this.totalAmount = getTotalAmount();
-            switch(approximationType) {
+            switch (approximationType) {
                 case EMPTY:
                     this.approximation = new EmptyApproximation();
                     break;
@@ -82,16 +82,17 @@ public class Slice {
     /**
      * Генерирует версию данного разреза с накоплением, т. е. значение i-й точки в новом разрезе равно сумме значений
      * точек с 0 по i в текущем разрезе.
+     *
      * @return новый разрез с накоплением
      */
     public Slice getAccumulation() {
-        if(points.length > 0) {
+        if (points.length > 0) {
             List<SlicePoint> pointsTruncated = new ArrayList<>();
             pointsTruncated.add(new SlicePoint(points[0].value * points[0].amount, 1, points[0].date));
-            for(int i = 1; i < points.length; i++) {
+            for (int i = 1; i < points.length; i++) {
                 SlicePoint newPoint = new SlicePoint(pointsTruncated.get(pointsTruncated.size() - 1).value + points[i].value * points[i].amount,
                         1, points[i].date);
-                if(points[i].date.getTime() == pointsTruncated.get(pointsTruncated.size() - 1).date.getTime()) {
+                if (points[i].date.getTime() == pointsTruncated.get(pointsTruncated.size() - 1).date.getTime()) {
                     pointsTruncated.remove(pointsTruncated.size() - 1);
                 }
                 pointsTruncated.add(newPoint);
@@ -105,8 +106,8 @@ public class Slice {
     /**
      * Проверяет, верно ли, что между двумя точками значение разреза уменьшается не менее чем на определенную величину
      *
-     * @param pos1 - номер первой точки
-     * @param pos2 - номер второй точки
+     * @param pos1      - номер первой точки
+     * @param pos2      - номер второй точки
      * @param threshold - необходимое уменьшение значения
      * @return true, если уменьшение достаточно велико, иначе false
      */
@@ -119,8 +120,8 @@ public class Slice {
     /**
      * Проверяет, верно ли, что между двумя точками значение разреза колеблется не менее чем на определенную величину
      *
-     * @param pos1 - номер первой точки
-     * @param pos2 - номер второй точки
+     * @param pos1      - номер первой точки
+     * @param pos2      - номер второй точки
      * @param threshold - максимальное изменение значения
      * @return true, если изменение достаточно мало, иначе false
      */
@@ -138,11 +139,11 @@ public class Slice {
     public long getLocalValueRange(int pos1, int pos2) {
         long min = points[pos1].value * points[pos1].amount;
         long max = points[pos1].value * points[pos1].amount;
-        for(int i = pos1; i <= pos2; i++) {
-            if(points[i].value * points[i].amount < min) {
+        for (int i = pos1; i <= pos2; i++) {
+            if (points[i].value * points[i].amount < min) {
                 min = points[i].value * points[i].amount;
             }
-            if(points[i].value > max) {
+            if (points[i].value > max) {
                 max = points[i].value * points[i].amount;
             }
         }
@@ -197,7 +198,7 @@ public class Slice {
      */
     private long getTotalAmount() {
         long res = 0;
-        for(SlicePoint point: points) {
+        for (SlicePoint point : points) {
             res += point.amount;
         }
         return res;
@@ -226,16 +227,16 @@ public class Slice {
      * @return значение разности
      */
     private long getValueRange() {
-        if(points.length == 0) {
+        if (points.length == 0) {
             return 0;
         }
         long min = points[0].value * points[0].amount;
         long max = points[0].value * points[0].amount;
-        for(SlicePoint point: points) {
-            if(point.value * point.amount < min) {
+        for (SlicePoint point : points) {
+            if (point.value * point.amount < min) {
                 min = point.value * point.amount;
             }
-            if(point.value * point.amount > max) {
+            if (point.value * point.amount > max) {
                 max = point.value * point.amount;
             }
         }

@@ -16,7 +16,7 @@ public class LinearRegression implements Approximation {
 
     @Override
     public long getApproximate(Slice slice, int pos) {
-        return (long)((slice.points[pos].date.getTime() - slice.points[0].date.getTime()) * approximationAngle + approximationOffset);
+        return (long) ((slice.points[pos].date.getTime() - slice.points[0].date.getTime()) * approximationAngle + approximationOffset);
     }
 
     @Override
@@ -34,7 +34,7 @@ public class LinearRegression implements Approximation {
      *
      * @param slice - срез, на котором находится регрессия
      * @param start - индекс первой точки регрессии
-     * @param end - индекс последней точки регрессии
+     * @param end   - индекс последней точки регрессии
      */
     private void calculateApproximation(Slice slice, int start, int end) {
         long firstTime = slice.points[0].date.getTime();
@@ -42,7 +42,7 @@ public class LinearRegression implements Approximation {
         double sumY = 0;
         double sumXsq = 0;
         double sumXY = 0;
-        for(int i = Math.max(0, start); i < slice.points.length && i <= end; i++) {
+        for (int i = Math.max(0, start); i < slice.points.length && i <= end; i++) {
             long elapsedTime = slice.points[i].date.getTime() - firstTime;
             sumX += elapsedTime;
             sumY += slice.points[i].value * slice.points[i].amount;
@@ -59,11 +59,11 @@ public class LinearRegression implements Approximation {
      *
      * @param slice - срез, на котором находится регрессия
      * @param start - индекс первой точки регрессии
-     * @param end - индекс последней точки регрессии
+     * @param end   - индекс последней точки регрессии
      */
     private void calculateSigma(Slice slice, int start, int end) {
         double varianceSum = 0;
-        for(int i = Math.max(0, start); i < slice.points.length && i <= end; i++) {
+        for (int i = Math.max(0, start); i < slice.points.length && i <= end; i++) {
             varianceSum = varianceSum + Math.pow(slice.points[i].value * slice.points[i].amount - getApproximate(slice, i), 2);
         }
         varianceSum = Math.sqrt(varianceSum / slice.points.length);
