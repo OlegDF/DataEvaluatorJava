@@ -82,7 +82,7 @@ public class DataRetriever {
 
         final Pattern intPattern = Pattern.compile("-?\\d+");
         final Pattern floatPattern = Pattern.compile("-?\\d+(\\.\\d+)?");
-        final Pattern timestampPattern = Pattern.compile("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\+*");
+        final Pattern timestampPattern = Pattern.compile("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.*");
 
         for(int i = 0; i < firstRow.length; i++) {
             if(intPattern.matcher(firstRow[i]).matches()) {

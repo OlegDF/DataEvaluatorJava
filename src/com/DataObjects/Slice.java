@@ -58,23 +58,24 @@ public class Slice {
             this.valueRange = getValueRange();
             this.dateRange = getDateRange();
             this.totalAmount = getTotalAmount();
+            switch(approximationType) {
+                case EMPTY:
+                    this.approximation = new EmptyApproximation();
+                    break;
+                case LINEAR:
+                    this.approximation = new LinearRegression(this, 0, points.length - 1);
+                    break;
+                case AVERAGES:
+                    this.approximation = new AveragesApproximation(this);
+                    break;
+                default:
+                    this.approximation = new EmptyApproximation();
+            }
         } else {
             this.valueRange = 0;
             this.dateRange = 0;
             this.totalAmount = 0;
-        }
-        switch(approximationType) {
-            case EMPTY:
-                this.approximation = new EmptyApproximation();
-                break;
-            case LINEAR:
-                this.approximation = new LinearRegression(this, 0, points.length - 1);
-                break;
-            case AVERAGES:
-                this.approximation = new AveragesApproximation(this);
-                break;
-            default:
-                this.approximation = new EmptyApproximation();
+            this.approximation = new EmptyApproximation();
         }
     }
 
@@ -84,17 +85,21 @@ public class Slice {
      * @return новый разрез с накоплением
      */
     public Slice getAccumulation() {
-        List<SlicePoint> pointsTruncated = new ArrayList<>();
-        pointsTruncated.add(new SlicePoint(points[0].value * points[0].amount, 1, points[0].date));
-        for(int i = 1; i < points.length; i++) {
-            SlicePoint newPoint = new SlicePoint(pointsTruncated.get(pointsTruncated.size() - 1).value + points[i].value * points[i].amount,
-                    1, points[i].date);
-            if(points[i].date.getTime() == pointsTruncated.get(pointsTruncated.size() - 1).date.getTime()) {
-                pointsTruncated.remove(pointsTruncated.size() - 1);
+        if(points.length > 0) {
+            List<SlicePoint> pointsTruncated = new ArrayList<>();
+            pointsTruncated.add(new SlicePoint(points[0].value * points[0].amount, 1, points[0].date));
+            for(int i = 1; i < points.length; i++) {
+                SlicePoint newPoint = new SlicePoint(pointsTruncated.get(pointsTruncated.size() - 1).value + points[i].value * points[i].amount,
+                        1, points[i].date);
+                if(points[i].date.getTime() == pointsTruncated.get(pointsTruncated.size() - 1).date.getTime()) {
+                    pointsTruncated.remove(pointsTruncated.size() - 1);
+                }
+                pointsTruncated.add(newPoint);
             }
-            pointsTruncated.add(newPoint);
+            return new Slice(tableName, valueName, colNames, labels, pointsTruncated.toArray(new SlicePoint[0]), approximation.getType());
+        } else {
+            return this;
         }
-        return new Slice(tableName, valueName, colNames, labels, pointsTruncated.toArray(new SlicePoint[0]), approximation.getType());
     }
 
     /**

@@ -12,6 +12,7 @@ import com.SupportClasses.ConsoleLogger;
 import com.SupportClasses.Logger;
 import com.View.GraphExporter;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -44,6 +45,10 @@ public class DataController {
         intervalFinder = new SimpleIntervalFinder();
     }
 
+    public void setTableName(String tableName) {
+        this.tableName = tableName;
+    }
+
     public void parseCsv() {
         dataRetriever.csvToDatabase(tableName);
     }
@@ -56,8 +61,9 @@ public class DataController {
         logger.logMessage("Начинается экспорт графиков...");
         List<Slice> slices;
         List<String> valueNames = dbService.getValueNames(tableName);
+        List<Date> borderDates = dbService.getBorderDates(tableName);
         for(String valueName: valueNames) {
-            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo);
+            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo, borderDates.get(0), borderDates.get(1));
             int graphsExported = 0;
             for(Slice slice: slices) {
                 if(graphExporter.exportGraphToPng(slice)) {
@@ -87,8 +93,9 @@ public class DataController {
         logger.logMessage("Начинается экспорт графиков уменьшения...");
         List<Slice> slices;
         List<String> valueNames = dbService.getValueNames(tableName);
+        List<Date> borderDates = dbService.getBorderDates(tableName);
         for(String valueName: valueNames) {
-            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo);
+            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo, borderDates.get(0), borderDates.get(1));
             int intervalsExported = 0;
             List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slices, minIntervalMult, thresholdMult,
                     maxIntervals, true);
@@ -122,8 +129,9 @@ public class DataController {
         logger.logMessage("Начинается экспорт графиков отсутствия роста...");
         List<Slice> slices;
         List<String> valueNames = dbService.getValueNames(tableName);
+        List<Date> borderDates = dbService.getBorderDates(tableName);
         for(String valueName: valueNames) {
-            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo);
+            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo, borderDates.get(0), borderDates.get(1));
             int intervalsExported = 0;
             List<SuspiciousInterval> intervals = intervalFinder.getConstantIntervals(slices, minIntervalMult, thresholdMult,
                     maxIntervals, true);
@@ -147,18 +155,22 @@ public class DataController {
      */
     public void createDecreasesTable() {
         List<String> categoryNames = dbService.getCategoryNames(tableName);
-        final String[] colNames = new String[categoryNames.size() + 6];
-        final String[] colTypes = new String[categoryNames.size() + 6];
+        final String[] colNames = new String[categoryNames.size() + 8];
+        final String[] colTypes = new String[categoryNames.size() + 8];
         for(int i = 0; i < categoryNames.size(); i++) {
             colNames[i] = categoryNames.get(i);
             colTypes[i] = "varchar(255)";
         }
-        colNames[colNames.length - 6] = "value_name";
-        colTypes[colNames.length - 6] = "varchar(255)";
-        colNames[colNames.length - 5] = "pos1";
-        colTypes[colNames.length - 5] = "int8";
-        colNames[colNames.length - 4] = "pos2";
-        colTypes[colNames.length - 4] = "int8";
+        colNames[colNames.length - 8] = "value_name";
+        colTypes[colNames.length - 8] = "varchar(255)";
+        colNames[colNames.length - 7] = "pos1";
+        colTypes[colNames.length - 7] = "int8";
+        colNames[colNames.length - 6] = "pos2";
+        colTypes[colNames.length - 6] = "int8";
+        colNames[colNames.length - 5] = "min_date";
+        colTypes[colNames.length - 5] = "timestamptz";
+        colNames[colNames.length - 4] = "max_date";
+        colTypes[colNames.length - 4] = "timestamptz";
         colNames[colNames.length - 3] = "decrease_score";
         colTypes[colNames.length - 3] = "float";
         colNames[colNames.length - 2] = "relative_width";
@@ -184,11 +196,40 @@ public class DataController {
         String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
         List<Slice> slices;
         List<String> valueNames = dbService.getValueNames(tableName);
+        List<Date> borderDates = dbService.getBorderDates(tableName);
         for(String valueName: valueNames) {
-            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo);
+            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo, borderDates.get(0), borderDates.get(1));
             List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slices, minIntervalMult, thresholdMult,
                     maxIntervals, false);
-            dbService.insertDecrease(tableName + "_decreases", colNames, intervals);
+            dbService.insertDecrease(tableName + "_decreases", colNames, intervals, borderDates.get(0), borderDates.get(1));
+            logger.logMessage("Экспортировано " + intervals.size() + " интервалов");
+        }
+        logger.logMessage("Закончился экспорт интервалов уменьшения.");
+    }
+
+    /**
+     * Получает разрезы данных, сгруппированных по всем значениям одной или более категорий, делает накопление для
+     * каждого разреза, получает список интервалов, на которых значение убывает, сортирует его по величине убывания и
+     * записывает интервал в базу данных. Срезы берутся только по данным между двумя определенными датами.
+     *
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - минимальная разность между первой и последней величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля среднеквадратического отклонения)
+     * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
+     * @param minDate - дата начала интервалов
+     * @param maxDate - дата конца интервалов
+     */
+    public void exportDecreasesToDB(double minIntervalMult, double thresholdMult, int maxIntervals, Date minDate, Date maxDate) {
+        logger.logMessage("Начинается экспорт интервалов уменьшения...");
+        String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
+        List<Slice> slices;
+        List<String> valueNames = dbService.getValueNames(tableName);
+        for(String valueName: valueNames) {
+            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo, minDate, maxDate);
+            List<SuspiciousInterval> intervals = intervalFinder.getDecreasingIntervals(slices, minIntervalMult, thresholdMult,
+                    maxIntervals, false);
+            dbService.insertDecrease(tableName + "_decreases", colNames, intervals, minDate, maxDate);
             logger.logMessage("Экспортировано " + intervals.size() + " интервалов");
         }
         logger.logMessage("Закончился экспорт интервалов уменьшения.");
@@ -199,18 +240,22 @@ public class DataController {
      */
     public void createConstantsTable() {
         List<String> categoryNames = dbService.getCategoryNames(tableName);
-        final String[] colNames = new String[categoryNames.size() + 6];
-        final String[] colTypes = new String[categoryNames.size() + 6];
+        final String[] colNames = new String[categoryNames.size() + 8];
+        final String[] colTypes = new String[categoryNames.size() + 8];
         for(int i = 0; i < categoryNames.size(); i++) {
             colNames[i] = categoryNames.get(i);
             colTypes[i] = "varchar(255)";
         }
-        colNames[colNames.length - 6] = "value_name";
-        colTypes[colNames.length - 6] = "varchar(255)";
-        colNames[colNames.length - 5] = "pos1";
-        colTypes[colNames.length - 5] = "int8";
-        colNames[colNames.length - 4] = "pos2";
-        colTypes[colNames.length - 4] = "int8";
+        colNames[colNames.length - 8] = "value_name";
+        colTypes[colNames.length - 8] = "varchar(255)";
+        colNames[colNames.length - 7] = "pos1";
+        colTypes[colNames.length - 7] = "int8";
+        colNames[colNames.length - 6] = "pos2";
+        colTypes[colNames.length - 6] = "int8";
+        colNames[colNames.length - 5] = "min_date";
+        colTypes[colNames.length - 5] = "timestamptz";
+        colNames[colNames.length - 4] = "max_date";
+        colTypes[colNames.length - 4] = "timestamptz";
         colNames[colNames.length - 3] = "flatness_score";
         colTypes[colNames.length - 3] = "float";
         colNames[colNames.length - 2] = "relative_width";
@@ -236,11 +281,40 @@ public class DataController {
         String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
         List<Slice> slices;
         List<String> valueNames = dbService.getValueNames(tableName);
+        List<Date> borderDates = dbService.getBorderDates(tableName);
         for(String valueName: valueNames) {
-            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo);
+            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo, borderDates.get(0), borderDates.get(1));
             List<SuspiciousInterval> intervals = intervalFinder.getConstantIntervals(slices, minIntervalMult, thresholdMult,
                     maxIntervals, false);
-            dbService.insertConstant(tableName + "_constants", colNames, intervals);
+            dbService.insertConstant(tableName + "_constants", colNames, intervals, borderDates.get(0), borderDates.get(1));
+            logger.logMessage("Экспортировано " + intervals.size() + " интервалов");
+        }
+        logger.logMessage("Закончился экспорт интервалов отсутствия роста.");
+    }
+
+    /**
+     * Получает разрезы данных, сгруппированных по всем значениям одной или более категорий, делает накопление для
+     * каждого разреза, получает список интервалов, на которых значение не изменяется значительно, сортирует его по
+     * длине и записывает интервал в базу данных. Срезы берутся только по данным между двумя определенными датами.
+     *
+     * @param minIntervalMult - минимальная длина интервалов, которые будут рассматриваться (измеряется как доля длины
+     *                        временного промежутка всего разреза, от 0 до 1)
+     * @param thresholdMult - максимальная разность между максимальной и минимальной величиной для интервалов, которые будут
+     *                        рассматриваться (измеряется как доля среднеквадратического отклонения)
+     * @param maxIntervals - ограничение на количество интервалов, которые вернет алгоритм (выбирается начало списка)
+     * @param minDate - дата начала интервалов
+     * @param maxDate - дата конца интервалов
+     */
+    public void exportConstantsToDB(double minIntervalMult, double thresholdMult, int maxIntervals, Date minDate, Date maxDate) {
+        logger.logMessage("Начинается экспорт интервалов отсутствия роста...");
+        String[] colNames = dbService.getCategoryNames(tableName).toArray(new String[0]);
+        List<Slice> slices;
+        List<String> valueNames = dbService.getValueNames(tableName);
+        for(String valueName: valueNames) {
+            slices = sliceRetriever.getSlicesAccumulated(tableName, valueName, maxCategoriesPerCombo, maxSlicesPerCombo, minDate, maxDate);
+            List<SuspiciousInterval> intervals = intervalFinder.getConstantIntervals(slices, minIntervalMult, thresholdMult,
+                    maxIntervals, false);
+            dbService.insertConstant(tableName + "_constants", colNames, intervals, minDate, maxDate);
             logger.logMessage("Экспортировано " + intervals.size() + " интервалов");
         }
         logger.logMessage("Закончился экспорт интервалов отсутствия роста.");
@@ -251,6 +325,10 @@ public class DataController {
      */
     public void close() {
         dbService.closeConnection();
+    }
+
+    public DatabaseService getDbService() {
+        return dbService;
     }
 
 }
