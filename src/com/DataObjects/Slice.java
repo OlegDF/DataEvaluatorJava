@@ -88,9 +88,9 @@ public class Slice {
     public Slice getAccumulation() {
         if (points.length > 0) {
             List<SlicePoint> pointsTruncated = new ArrayList<>();
-            pointsTruncated.add(new SlicePoint(points[0].value * points[0].amount, 1, points[0].date));
+            pointsTruncated.add(new SlicePoint(points[0].value, 1, points[0].date));
             for (int i = 1; i < points.length; i++) {
-                SlicePoint newPoint = new SlicePoint(pointsTruncated.get(pointsTruncated.size() - 1).value + points[i].value * points[i].amount,
+                SlicePoint newPoint = new SlicePoint(pointsTruncated.get(pointsTruncated.size() - 1).value + points[i].value,
                         1, points[i].date);
                 if (points[i].date.getTime() == pointsTruncated.get(pointsTruncated.size() - 1).date.getTime()) {
                     pointsTruncated.remove(pointsTruncated.size() - 1);
