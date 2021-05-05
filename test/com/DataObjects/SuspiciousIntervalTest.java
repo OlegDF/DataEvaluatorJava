@@ -34,9 +34,9 @@ class SuspiciousIntervalTest {
         pointsAccumulated[3] = new SlicePoint(1150, 1, new Date(10040));
         pointsAccumulated[4] = new SlicePoint(1650, 1, new Date(10050));
         upwardSlice = new Slice(tableName, valueName, colNames, labels, pointsAccumulated, ApproximationType.LINEAR);
-        interval1 = new SuspiciousInterval(upwardSlice, 1, 2, 0.05);
-        interval2 = new SuspiciousInterval(upwardSlice, 0, 2, 0.05);
-        interval3 = new SuspiciousInterval(upwardSlice, 2, 4, 0.05);
+        interval1 = new SuspiciousInterval(upwardSlice, 1, 2, 0.2);
+        interval2 = new SuspiciousInterval(upwardSlice, 0, 2, 0.2);
+        interval3 = new SuspiciousInterval(upwardSlice, 2, 4, 0.2);
     }
 
     @AfterAll
@@ -58,7 +58,7 @@ class SuspiciousIntervalTest {
 
     @Test
     void intersects() {
-        SuspiciousInterval interval4 = new SuspiciousInterval(upwardSlice, 3, 4, 0.05);
+        SuspiciousInterval interval4 = new SuspiciousInterval(upwardSlice, 3, 4, 0.2);
         assertTrue(interval2.intersects(interval1));
         assertFalse(interval2.intersects(interval3));
         assertFalse(interval2.intersects(interval4));

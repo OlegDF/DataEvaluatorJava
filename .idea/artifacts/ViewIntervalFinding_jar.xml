@@ -1,0 +1,13 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="ViewIntervalFinding:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/</output-path>
+    <root id="archive" name="ViewIntervalFinding.jar">
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/meta/viewIntervalFinding/META-INF/MANIFEST.MF" />
+      </element>
+      <element id="module-output" name="DataEvaluatorJava" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/drivers/postgresql-42.2.19.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../jfreechart/target/jfreechart-2.0.0-SNAPSHOT.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
