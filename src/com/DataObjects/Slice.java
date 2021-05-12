@@ -112,7 +112,7 @@ public class Slice {
      * @return true, если уменьшение достаточно велико, иначе false
      */
     public boolean isIntervalDecreasing(int pos1, int pos2, long threshold) {
-        double decrease = points[pos2].value * points[pos2].amount - points[pos1].value * points[pos1].amount -
+        double decrease = points[pos2].value - points[pos1].value -
                 getApproximate(pos2) + getApproximate(pos1);
         return decrease < -threshold;
     }
@@ -137,14 +137,14 @@ public class Slice {
      * @return значение разности
      */
     public long getLocalValueRange(int pos1, int pos2) {
-        long min = points[pos1].value * points[pos1].amount;
-        long max = points[pos1].value * points[pos1].amount;
+        long min = points[pos1].value;
+        long max = points[pos1].value;
         for (int i = pos1; i <= pos2; i++) {
-            if (points[i].value * points[i].amount < min) {
-                min = points[i].value * points[i].amount;
+            if (points[i].value < min) {
+                min = points[i].value;
             }
             if (points[i].value > max) {
-                max = points[i].value * points[i].amount;
+                max = points[i].value;
             }
         }
         return Math.abs(max - min);
@@ -230,14 +230,14 @@ public class Slice {
         if (points.length == 0) {
             return 0;
         }
-        long min = points[0].value * points[0].amount;
-        long max = points[0].value * points[0].amount;
+        long min = points[0].value;
+        long max = points[0].value;
         for (SlicePoint point : points) {
-            if (point.value * point.amount < min) {
-                min = point.value * point.amount;
+            if (point.value < min) {
+                min = point.value;
             }
-            if (point.value * point.amount > max) {
-                max = point.value * point.amount;
+            if (point.value > max) {
+                max = point.value;
             }
         }
         return max - min;

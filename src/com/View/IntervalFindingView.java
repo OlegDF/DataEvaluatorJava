@@ -3,6 +3,8 @@ package com.View;
 import com.Controler.DataController;
 import com.Model.DatabaseService;
 import com.SupportClasses.Config;
+import com.SupportClasses.ConsoleLogger;
+import com.SupportClasses.Logger;
 
 import javax.swing.*;
 import javax.swing.event.ChangeListener;
@@ -15,6 +17,7 @@ public class IntervalFindingView {
 
     private final DataController dataController;
     private final Config config;
+    private final Logger logger;
     private final DatabaseService dbService;
 
     private final JFrame mainFrame;
@@ -30,8 +33,8 @@ public class IntervalFindingView {
     private final JLabel minDateNumber;
     private final JLabel maxDateNumber;
 
-    private final JButton startCsvParsingButton;
-    private final JButton startIntervalRetrievalButton;
+    private final JButton startCsvParsingButton, stopCsvParsingButton;
+    private final JButton startIntervalRetrievalButton, stopIntervalRetrievalButton;
 
     private int dateSliderWidth = 600;
     private long dateLowerLimit, dateUpperLimit;
@@ -45,6 +48,7 @@ public class IntervalFindingView {
     public IntervalFindingView(DataController dataController) {
         this.dataController = dataController;
         config = new Config();
+        logger = new ConsoleLogger();
         tableName = config.getTableName();
         dbService = dataController.getDbService();
         getFirstLastDate();
@@ -63,7 +67,9 @@ public class IntervalFindingView {
         maxDateNumber = new JLabel();
 
         startIntervalRetrievalButton = new JButton();
+        stopIntervalRetrievalButton = new JButton();
         startCsvParsingButton = new JButton();
+        stopCsvParsingButton = new JButton();
 
         initializeInterface(tableName);
         setupWindow();
@@ -210,7 +216,25 @@ public class IntervalFindingView {
             };
             csvParsingWorker.execute();
         });
-        csvParsingPanel.add(startCsvParsingButton, constraints);
+
+        stopCsvParsingButton.setText("Прервать процесс");
+        setSize(stopCsvParsingButton, 200, 30);
+        stopCsvParsingButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        stopCsvParsingButton.addActionListener(e -> {
+            if(csvParsingWorker != null) {
+                if(!csvParsingWorker.isDone()) {
+                    csvParsingWorker.cancel(true);
+                    logger.logMessage("Загрузка данных прервана пользователем.");
+                }
+            }
+        });
+        stopCsvParsingButton.setEnabled(false);
+
+        JPanel csvButtonPanel = new JPanel();
+        setSize(csvButtonPanel, 450, 35);
+        csvButtonPanel.add(startCsvParsingButton, constraints);
+        csvButtonPanel.add(stopCsvParsingButton, constraints);
+        csvParsingPanel.add(csvButtonPanel, constraints);
 
         startIntervalRetrievalButton.setText("Начать поиск интервалов");
         setSize(startIntervalRetrievalButton, 200, 30);
@@ -237,7 +261,25 @@ public class IntervalFindingView {
             };
             intervalFindingWorker.execute();
         });
-        intervalsFindingPanel.add(startIntervalRetrievalButton, constraints);
+
+        stopIntervalRetrievalButton.setText("Прервать процесс");
+        setSize(stopIntervalRetrievalButton, 200, 30);
+        stopIntervalRetrievalButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        stopIntervalRetrievalButton.addActionListener(e -> {
+            if(intervalFindingWorker != null) {
+                if(!intervalFindingWorker.isDone()) {
+                    intervalFindingWorker.cancel(true);
+                    logger.logMessage("Поиск интервалов прерван пользователем.");
+                }
+            }
+        });
+        stopIntervalRetrievalButton.setEnabled(false);
+
+        JPanel intervalRetrievalButtonPanel = new JPanel();
+        setSize(intervalRetrievalButtonPanel, 450, 35);
+        intervalRetrievalButtonPanel.add(startIntervalRetrievalButton, constraints);
+        intervalRetrievalButtonPanel.add(stopIntervalRetrievalButton, constraints);
+        intervalsFindingPanel.add(intervalRetrievalButtonPanel, constraints);
     }
 
     private void lockInterface() {
@@ -247,6 +289,8 @@ public class IntervalFindingView {
         maxDateSlider.setEnabled(false);
         startCsvParsingButton.setEnabled(false);
         startIntervalRetrievalButton.setEnabled(false);
+        stopCsvParsingButton.setEnabled(true);
+        stopIntervalRetrievalButton.setEnabled(true);
     }
 
     private void unlockInterface() {
@@ -256,6 +300,8 @@ public class IntervalFindingView {
         maxDateSlider.setEnabled(true);
         startCsvParsingButton.setEnabled(true);
         startIntervalRetrievalButton.setEnabled(true);
+        stopCsvParsingButton.setEnabled(false);
+        stopIntervalRetrievalButton.setEnabled(false);
     }
 
     /**

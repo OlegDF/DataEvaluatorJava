@@ -38,7 +38,7 @@ public class SuspiciousInterval {
         if (pos1 < 0 || pos1 >= slice.points.length || pos2 < 0 || pos2 >= slice.points.length) {
             return -1;
         }
-        double res = Math.sqrt(slice.dateRange) * Math.pow(getRelativeDiff(), 2) * pos1;
+        double res = Math.sqrt(slice.dateRange) * Math.pow(getRelativeDiff(), 2);
         if (getRelativeWidth() != 0) {
             res /= Math.pow(getRelativeWidth(), 2);
         }

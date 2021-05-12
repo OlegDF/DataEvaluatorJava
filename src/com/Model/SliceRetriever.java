@@ -29,6 +29,8 @@ public class SliceRetriever {
      * @param valueName  - название ряда данных
      * @param categories - названия категорий
      * @param maxSlices  - максимальное количество разрезов, возвращаемое методом
+     * @param minDate - первая дата срезов
+     * @param maxDate - последняя дата срезов
      * @return список разрезов
      */
     public List<Slice> getCategorySlices(String tableName, String valueName, String[] categories, int maxSlices, Date minDate, Date maxDate) {
@@ -50,6 +52,8 @@ public class SliceRetriever {
      * @param valueName  - название ряда данных
      * @param categories - названия категорий
      * @param maxSlices  - максимальное количество разрезов, возвращаемое методом
+     * @param minDate - первая дата срезов
+     * @param maxDate - последняя дата срезов
      * @return список разрезов с накоплением
      */
     public List<Slice> getCategorySlicesAccumulated(String tableName, String valueName, String[] categories, int maxSlices, Date minDate, Date maxDate) {
@@ -69,6 +73,8 @@ public class SliceRetriever {
      * @param valueName     - название ряда данных
      * @param maxSlices     - максимальное количество разрезов с одной комбинацией ярлыков, возвращаемое методом
      * @param maxCategories - максимальное количество категорий, по которым группируется каждый разрез.
+     * @param minDate - первая дата срезов
+     * @param maxDate - последняя дата срезов
      * @return список разрезов с накоплением
      */
     public List<Slice> getSlicesAccumulated(String tableName, String valueName, int maxCategories, int maxSlices, Date minDate, Date maxDate) {

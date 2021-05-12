@@ -65,7 +65,7 @@ public class GraphViewer {
     private final double minIntervalLowerLimit = 0.05, minIntervalUpperLimit = 0.5;
     private final double thresholdLowerLimit = 0.05, thresholdUpperLimit = 3;
 
-    private final JButton startCalculationButton;
+    private final JButton startCalculationButton, stopCalculationButton;
     private final JButton graphLeftButton, graphRightButton;
     private final JLabel currentGraphNumber;
 
@@ -98,6 +98,7 @@ public class GraphViewer {
         leftRightButtonsPanel = new JPanel();
 
         startCalculationButton = new JButton();
+        stopCalculationButton = new JButton();
         graphLeftButton = new JButton();
         graphRightButton = new JButton();
         currentGraphNumber = new JLabel();
@@ -364,26 +365,49 @@ public class GraphViewer {
         startCalculationButton.addActionListener(e -> {
             lockInterface();
             intervalRetrievalWorker = new SwingWorker<>() {
+                boolean intervalsRetrieved = false;
+
                 @Override
                 protected Void doInBackground() {
                     getIntervals();
+                    intervalsRetrieved = true;
                     return null;
                 }
 
                 @Override
                 public void done() {
-                    if (decreaseIntervals.size() > 0) {
-                        currentGraphs.add(new ChartPanel(graphExporter.getDecreaseChart(decreaseIntervals.get(0))));
-                        drawGraph();
-                    } else {
-                        displayLackOfGraphs();
+                    if(intervalsRetrieved) {
+                        if (decreaseIntervals.size() > 0) {
+                            currentGraphs.add(new ChartPanel(graphExporter.getDecreaseChart(decreaseIntervals.get(0))));
+                            drawGraph();
+                        } else {
+                            displayLackOfGraphs();
+                        }
                     }
                     unlockInterface();
                 }
             };
             intervalRetrievalWorker.execute();
         });
-        buttonsPanel.add(startCalculationButton, constraints);
+
+        stopCalculationButton.setText("Прервать процесс");
+        setSize(stopCalculationButton, 200, 30);
+        stopCalculationButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        stopCalculationButton.addActionListener(e -> {
+            if(intervalRetrievalWorker != null) {
+                if(!intervalRetrievalWorker.isDone()) {
+                    intervalRetrievalWorker.cancel(true);
+                    logger.logMessage("Получение интервалов прервано пользователем.");
+                }
+            }
+        });
+        stopCalculationButton.setEnabled(false);
+
+        JPanel calculationButtonPanel = new JPanel();
+        setSize(calculationButtonPanel, 450, 35);
+        calculationButtonPanel.add(startCalculationButton, constraints);
+        calculationButtonPanel.add(stopCalculationButton, constraints);
+        buttonsPanel.add(calculationButtonPanel, constraints);
 
         graphLeftButton.setText("<");
         graphLeftButton.setFont(new Font("Arial", Font.BOLD, 28));
@@ -575,6 +599,7 @@ public class GraphViewer {
         minIntervalMultSlider.setEnabled(false);
         thresholdMultSlider.setEnabled(false);
         startCalculationButton.setEnabled(false);
+        stopCalculationButton.setEnabled(true);
     }
 
     private void unlockInterface() {
@@ -593,6 +618,7 @@ public class GraphViewer {
         minIntervalMultSlider.setEnabled(true);
         thresholdMultSlider.setEnabled(true);
         startCalculationButton.setEnabled(true);
+        stopCalculationButton.setEnabled(false);
     }
 
     /**
@@ -625,10 +651,10 @@ public class GraphViewer {
                 append(" до ").append(interval.slice.getLastPoint().date.toString()).append("\n");
         graphSummary.append("Даты интервала: от ").append(interval.getFirstPoint().date.toString()).
                 append(" до ").append(interval.getLastPoint().date.toString()).append("\n");
-        graphSummary.append("Значения среза: в начале ").append(interval.slice.getFirstPoint().value * interval.slice.getFirstPoint().amount).
-                append(", в конце ").append(interval.slice.getLastPoint().value * interval.slice.getLastPoint().amount).append("\n");
-        graphSummary.append("Значения интервала: в начале ").append(interval.getFirstPoint().value * interval.getFirstPoint().amount).
-                append(", в конце ").append(interval.getLastPoint().value * interval.getLastPoint().amount);
+        graphSummary.append("Значения среза: в начале ").append(interval.slice.getFirstPoint().value).
+                append(", в конце ").append(interval.slice.getLastPoint().value).append("\n");
+        graphSummary.append("Значения интервала: в начале ").append(interval.getFirstPoint().value).
+                append(", в конце ").append(interval.getLastPoint().value);
         graphSummaryText.setText(graphSummary.toString());
         graphSummaryText.setEditable(false);
     }

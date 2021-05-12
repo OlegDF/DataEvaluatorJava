@@ -127,7 +127,7 @@ public class GraphExporter {
         TimeSeries series = new TimeSeries("Значение");
         final int chunkLength = Integer.max(slice.points.length / 4096, 1);
         for (int i = 0; i < slice.points.length; i += chunkLength) {
-            series.add(new Millisecond(slice.points[i].date), slice.points[i].value * slice.points[i].amount);
+            series.add(new Millisecond(slice.points[i].date), slice.points[i].value);
         }
         TimeSeriesCollection dataset = new TimeSeriesCollection();
         dataset.addSeries(series);
@@ -154,15 +154,15 @@ public class GraphExporter {
         TimeSeries mainSeries = new TimeSeries("Значение");
         final int chunkLength = Integer.max(slice.points.length / 4096, 1);
         for (int i = 0; i <= interval.pos1; i += chunkLength) {
-            mainSeries.add(new Millisecond(slice.points[i].date), slice.points[i].value * slice.points[i].amount);
+            mainSeries.add(new Millisecond(slice.points[i].date), slice.points[i].value);
         }
         TimeSeries decreaseSeries = new TimeSeries("Интервал с уменьшением");
         for (int i = interval.pos1; i <= interval.pos2; i += chunkLength) {
-            decreaseSeries.add(new Millisecond(slice.points[i].date), slice.points[i].value * slice.points[i].amount);
+            decreaseSeries.add(new Millisecond(slice.points[i].date), slice.points[i].value);
         }
         TimeSeries mainSeries2 = new TimeSeries("Значение");
         for (int i = interval.pos2; i < slice.points.length; i += chunkLength) {
-            mainSeries2.add(new Millisecond(slice.points[i].date), slice.points[i].value * slice.points[i].amount);
+            mainSeries2.add(new Millisecond(slice.points[i].date), slice.points[i].value);
         }
         TimeSeriesCollection dataset = new TimeSeriesCollection();
         dataset.addSeries(mainSeries);
