@@ -45,9 +45,9 @@ public class LinearRegression implements Approximation {
         for (int i = Math.max(0, start); i < slice.points.length && i <= end; i++) {
             long elapsedTime = slice.points[i].date.getTime() - firstTime;
             sumX += elapsedTime;
-            sumY += slice.points[i].value * slice.points[i].amount;
+            sumY += slice.points[i].value;
             sumXsq += Math.pow(elapsedTime, 2);
-            sumXY += elapsedTime * slice.points[i].value * slice.points[i].amount;
+            sumXY += elapsedTime * slice.points[i].value;
         }
         approximationAngle = (sumXY * slice.points.length - sumX * sumY) / (sumXsq * slice.points.length - sumX * sumX);
         approximationOffset = (sumY * sumXsq - sumX * sumXY) / (sumXsq * slice.points.length - sumX * sumX);
@@ -64,7 +64,7 @@ public class LinearRegression implements Approximation {
     private void calculateSigma(Slice slice, int start, int end) {
         double varianceSum = 0;
         for (int i = Math.max(0, start); i < slice.points.length && i <= end; i++) {
-            varianceSum = varianceSum + Math.pow(slice.points[i].value * slice.points[i].amount - getApproximate(slice, i), 2);
+            varianceSum = varianceSum + Math.pow(slice.points[i].value - getApproximate(slice, i), 2);
         }
         varianceSum = Math.sqrt(varianceSum / slice.points.length);
         sigma = varianceSum;

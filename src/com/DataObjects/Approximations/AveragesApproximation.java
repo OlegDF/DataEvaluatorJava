@@ -40,7 +40,7 @@ public class AveragesApproximation implements Approximation {
             long avg = 0;
             int pointCount = 0;
             for (int j = Math.max(i - averageWindow, 0); j < Math.min(i + averageWindow, slice.points.length); j++) {
-                avg += slice.points[j].value * slice.points[j].amount;
+                avg += slice.points[j].value;
                 pointCount++;
             }
             if (pointCount > 0) {
@@ -57,7 +57,7 @@ public class AveragesApproximation implements Approximation {
     private void calculateSigma(Slice slice) {
         double varianceSum = 0;
         for (int i = 0; i < slice.points.length; i++) {
-            varianceSum = varianceSum + Math.pow(slice.points[i].value * slice.points[i].amount - getApproximate(slice, i), 2);
+            varianceSum = varianceSum + Math.pow(slice.points[i].value - getApproximate(slice, i), 2);
         }
         varianceSum = Math.sqrt(varianceSum / slice.points.length);
         sigma = varianceSum;

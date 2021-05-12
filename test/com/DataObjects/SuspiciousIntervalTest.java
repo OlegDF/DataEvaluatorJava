@@ -46,8 +46,8 @@ class SuspiciousIntervalTest {
 
     @Test
     void getDecreaseScore() {
-        assertTrue(interval1.getDecreaseScore() > interval3.getDecreaseScore());
-        assertTrue(interval3.getDecreaseScore() > interval2.getDecreaseScore());
+        assertTrue(interval1.getDecreaseScore() > interval2.getDecreaseScore());
+        assertTrue(interval2.getDecreaseScore() > interval3.getDecreaseScore());
     }
 
     @Test
