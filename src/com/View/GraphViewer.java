@@ -287,7 +287,9 @@ public class GraphViewer {
         for (String value : valueNames) {
             valueBox.addItem(value);
         }
-        valueBox.setSelectedIndex(0);
+        if(valueNames.size() > 0) {
+            valueBox.setSelectedIndex(0);
+        }
     }
 
     /**
@@ -377,9 +379,13 @@ public class GraphViewer {
                 @Override
                 public void done() {
                     if(intervalsRetrieved) {
-                        if (decreaseIntervals.size() > 0) {
-                            currentGraphs.add(new ChartPanel(graphExporter.getDecreaseChart(decreaseIntervals.get(0))));
-                            drawGraph();
+                        if(decreaseIntervals != null) {
+                            if (decreaseIntervals.size() > 0) {
+                                currentGraphs.add(new ChartPanel(graphExporter.getDecreaseChart(decreaseIntervals.get(0))));
+                                drawGraph();
+                            } else {
+                                displayLackOfGraphs();
+                            }
                         } else {
                             displayLackOfGraphs();
                         }

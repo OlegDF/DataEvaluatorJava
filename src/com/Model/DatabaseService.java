@@ -59,6 +59,9 @@ public class DatabaseService {
      * @param colTypes  - типы данных в соответствующих столбцах
      */
     public void createTable(String tableName, String[] colNames, String[] colTypes) {
+        if(connection == null) {
+            return;
+        }
         StringBuilder query = new StringBuilder();
         try {
             connection.createStatement().executeUpdate("DROP TABLE IF EXISTS " + tableName + ";");
@@ -87,6 +90,9 @@ public class DatabaseService {
      * @param rows      - значения в новоых строках в строковом виде
      */
     public void insertData(String tableName, String[] colNames, String[] colTypes, List<String[]> rows) {
+        if(connection == null) {
+            return;
+        }
         StringBuilder query = new StringBuilder();
         query.append("INSERT INTO ").append(tableName).append("(");
         for (int i = 0; i < colNames.length; i++) {
@@ -141,6 +147,9 @@ public class DatabaseService {
      */
     public Slice getSlice(String tableName, String valueName, String[] colNames, String[] labels, ApproximationType approximationType,
                           Date minDate, Date maxDate) {
+        if(connection == null) {
+            return new Slice(tableName, valueName, colNames, labels);
+        }
         StringBuilder query = new StringBuilder();
         try {
             query.append("SELECT * FROM ").append(tableName).append(" WHERE ");
@@ -178,6 +187,12 @@ public class DatabaseService {
      * @return список с 2 датами - наименьшей и наибольшей
      */
     public List<Date> getBorderDates(String tableName) {
+        if(connection == null) {
+            List<Date> dates = new ArrayList<>();
+            dates.add(new Date());
+            dates.add(new Date());
+            return dates;
+        }
         String query = "";
         try {
             query = "SELECT MIN(first_date) AS min_date, MAX(first_date) AS max_date FROM " + tableName + ";";
@@ -202,6 +217,9 @@ public class DatabaseService {
      * @return список значений в строковом виде
      */
     public List<String[]> getLabelCombinations(String tableName, String[] colNames, int maxCount) {
+        if(connection == null) {
+            return new ArrayList<>();
+        }
         StringBuilder query = new StringBuilder();
         try {
             query.append("SELECT ");
@@ -243,6 +261,9 @@ public class DatabaseService {
      * @param tableName - название таблицы
      */
     public void insertLabelList(String tableName) {
+        if(connection == null) {
+            return;
+        }
         StringBuilder query = new StringBuilder();
         try {
             List<String> categories = getCategoryNames(tableName);
@@ -275,6 +296,9 @@ public class DatabaseService {
     }
 
     public List<String> getLabelList(String tableName, String category, int maxCount) {
+        if(connection == null) {
+            return new ArrayList<>();
+        }
         String query = "";
         try {
             query = "SELECT label FROM " + tableName + "_labels WHERE category = '" + category + "' LIMIT " + maxCount + ";";
@@ -300,6 +324,9 @@ public class DatabaseService {
      * @return список столбцов в строковом виде
      */
     public List<String> getCategoryNames(String tableName) {
+        if(connection == null) {
+            return new ArrayList<>();
+        }
         String query = "";
         try {
             query = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "' ORDER BY column_name;";
@@ -328,6 +355,9 @@ public class DatabaseService {
      * @return список столбцов в строковом виде
      */
     public List<String> getValueNames(String tableName) {
+        if(connection == null) {
+            return new ArrayList<>();
+        }
         String query = "";
         try {
             query = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "' ORDER BY column_name;";
@@ -355,6 +385,9 @@ public class DatabaseService {
      * @return список столбцов в строковом виде
      */
     public List<String> getTableNames() {
+        if(connection == null) {
+            return new ArrayList<>();
+        }
         String query = "";
         try {
             query = "SELECT table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE' " +
@@ -385,6 +418,9 @@ public class DatabaseService {
      * @param intervals - вставляемые интервалы
      */
     public void insertDecrease(String tableName, String[] colNames, List<SuspiciousInterval> intervals, Date minDate, Date maxDate) {
+        if(connection == null) {
+            return;
+        }
         StringBuilder query = new StringBuilder();
         try {
             query.append("INSERT INTO ").append(tableName).append("(");
@@ -460,6 +496,9 @@ public class DatabaseService {
     public List<SuspiciousInterval> getDecreases(String tableName, String valueName, List<String[]> categoryCombos,
                                                  ApproximationType approximationType, double minIntervalMult,
                                                  double thresholdMult, int maxIntervals) {
+        if(connection == null) {
+            return new ArrayList<>();
+        }
         StringBuilder query = new StringBuilder();
         try {
             String tableDecName = tableName + "_decreases";
@@ -512,6 +551,9 @@ public class DatabaseService {
     public List<SuspiciousInterval> getDecreasesSimple(String tableName, String valueName, String[] colNames, String[] labels,
                                                        ApproximationType approximationType, double minIntervalMult,
                                                        double thresholdMult, int maxIntervals) {
+        if(connection == null) {
+            return new ArrayList<>();
+        }
         StringBuilder query = new StringBuilder();
         try {
             String tableDecName = tableName + "_decreases";
@@ -554,6 +596,9 @@ public class DatabaseService {
      * @param intervals - вставляемые интервалы
      */
     public void insertConstant(String tableName, String[] colNames, List<SuspiciousInterval> intervals, Date minDate, Date maxDate) {
+        if(connection == null) {
+            return;
+        }
         StringBuilder query = new StringBuilder();
         try {
             query.append("INSERT INTO ").append(tableName).append("(");
@@ -629,6 +674,9 @@ public class DatabaseService {
     public List<SuspiciousInterval> getConstants(String tableName, String valueName, List<String[]> categoryCombos,
                                                  ApproximationType approximationType, double minIntervalMult,
                                                  double thresholdMult, int maxIntervals) {
+        if(connection == null) {
+            return new ArrayList<>();
+        }
         StringBuilder query = new StringBuilder();
         try {
             String tableDecName = tableName + "_constants";
@@ -681,6 +729,9 @@ public class DatabaseService {
     public List<SuspiciousInterval> getConstantsSimple(String tableName, String valueName, String[] colNames, String[] labels,
                                                        ApproximationType approximationType, double minIntervalMult,
                                                        double thresholdMult, int maxIntervals) {
+        if(connection == null) {
+            return new ArrayList<>();
+        }
         StringBuilder query = new StringBuilder();
         try {
             String tableDecName = tableName + "_constants";
@@ -718,6 +769,9 @@ public class DatabaseService {
      * Закрывает соединение с базой данных.
      */
     public void closeConnection() {
+        if(connection == null) {
+            return;
+        }
         try {
             connection.close();
         } catch (SQLException ex) {
