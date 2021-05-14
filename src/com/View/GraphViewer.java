@@ -88,7 +88,7 @@ public class GraphViewer {
         tableName = config.getTableName();
         simpleMode = config.getViewerType();
         approximationType = config.getApproximationType();
-        dbService = new DatabaseService(config.getDbName(), config.getUserName(), config.getPassword());
+        dbService = new DatabaseService(config.getDbAddress(), config.getDbName(), config.getUserName(), config.getPassword());
         intervalFinder = new SimpleIntervalFinder();
         graphExporter = new GraphExporter();
 

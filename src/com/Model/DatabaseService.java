@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Сервис, который управляет запросами к базе данных Postgres.
@@ -33,13 +34,13 @@ public class DatabaseService {
      * @param user     - имя пользователя
      * @param password - пароль
      */
-    public DatabaseService(String db, String user, String password) {
+    public DatabaseService(String address, String db, String user, String password) {
         logger = new ConsoleLogger();
-        openConnection(db, user, password);
+        openConnection(address, db, user, password);
     }
 
-    private void openConnection(String db, String user, String password) {
-        final String url = "jdbc:postgresql://localhost/" + db + "?user=" + user + "&password=" + password;
+    private void openConnection(String address, String db, String user, String password) {
+        final String url = "jdbc:postgresql://" + address + "/" + db + "?user=" + user + "&password=" + password;
         try {
             connection = DriverManager.getConnection(url);
             logger.logMessage("Установлено подключение к базе данных " + db);
@@ -95,13 +96,21 @@ public class DatabaseService {
             }
         }
         query.append(") VALUES (");
+        final Pattern floatPattern = Pattern.compile("-?\\d+(\\.\\d+)?");
         for (int k = 0; k < rows.size(); k++) {
             String[] row = rows.get(k);
+            if(row.length != colNames.length) {
+                continue;
+            }
             for (int i = 0; i < row.length; i++) {
                 if (colTypes[i].equals("varchar(255)") || colTypes[i].equals("timestamptz")) {
                     query.append("'").append(row[i]).append("'");
                 } else {
-                    query.append(row[i]);
+                    if (floatPattern.matcher(row[i]).matches()) {
+                        query.append(row[i]);
+                    } else {
+                        query.append(0);
+                    }
                 }
                 if (i < row.length - 1) {
                     query.append(", ");
