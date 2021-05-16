@@ -43,6 +43,7 @@ public class Config {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+        res.putIfAbsent("db_address", "localhost");
         res.putIfAbsent("db_name", "evaluatordb");
         res.putIfAbsent("user_name", "evaluator");
         res.putIfAbsent("password", "comparison419");
@@ -52,6 +53,10 @@ public class Config {
         res.putIfAbsent("approximation_type", "linear");
         res.putIfAbsent("viewer_type", "non-simple");
         return res;
+    }
+
+    public String getDbAddress() {
+        return config.get("db_address");
     }
 
     public String getDbName() {

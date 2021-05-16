@@ -38,7 +38,7 @@ public class DataController {
         tableName = config.getTableName();
         maxSlicesPerCombo = config.getMaxSlicesPerCombo();
         maxCategoriesPerCombo = config.getMaxCategoriesPerCombo();
-        dbService = new DatabaseService(config.getDbName(), config.getUserName(), config.getPassword());
+        dbService = new DatabaseService(config.getDbAddress(), config.getDbName(), config.getUserName(), config.getPassword());
         dataRetriever = new DataRetriever(dbService);
         sliceRetriever = new SliceRetriever(dbService, config.getApproximationType());
         graphExporter = new GraphExporter();
